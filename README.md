@@ -4,7 +4,14 @@
 
 # BundleBleed
 
-**Scope-gated JavaScript reconnaissance for authorized bug bounty testing and pentesting.**
+**AI/LLM-assisted JavaScript reconnaissance and vulnerability triage for authorized bug bounty testing and pentesting.**
+
+<p align="center">
+  <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="LLM-powered" src="https://img.shields.io/badge/AI%2FLLM-Claude%20%7C%20Ollama%20%7C%20OpenRouter-purple">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-359%20passing-brightgreen">
+</p>
 
 BundleBleed collects a target's client-side JavaScript and server-rendered
 pages, extracts candidate API endpoints, secrets, subdomains, parameters,
@@ -13,12 +20,14 @@ scored, explainable hypotheses — so you spend your limited engagement time
 on the handful of things actually worth a manual look, not a flat dump of
 every string that resembled a URL.
 
-Everything above works with **zero LLM, zero API key, and zero third-party
-account** — an optional AI layer (Anthropic, a self-hosted Ollama model, or
-OpenRouter's free tier — your choice, never hardcoded to one vendor) can
-additionally classify endpoints, draft a report from a hypothesis, or
-suggest connections between findings, but the core pipeline never depends
-on it.
+The full pipeline works with **zero LLM, zero API key, and zero third-party
+account** — but plug in an LLM (Anthropic Claude, a self-hosted Ollama
+model, or any OpenRouter model, including several free-tier ones — your
+choice, never locked to one vendor) and BundleBleed uses it to classify
+endpoints, draft a human-readable report from a hypothesis, and surface
+attack chains connecting multiple findings, every claim tied back to a
+citation from the actual scan evidence. See [AI-Powered Analysis](#ai-powered-analysis)
+below.
 
 ## Why this one
 
@@ -35,6 +44,32 @@ disclaimer: a single `ScopeGuard` choke point that every outbound request
 passes through, active scanning gated behind three independent
 confirmations, and a verification layer that drafts a test for a human to
 run but **never sends anything itself.**
+
+## AI-Powered Analysis
+
+BundleBleed's core extraction and hypothesis-scoring pipeline is deterministic
+and needs no LLM at all — but every scan can optionally be handed to an AI
+layer for the parts a human would otherwise spend the most time on:
+
+- **Endpoint classification** — an LLM reviews extracted endpoints and
+  flags the ones most likely to be interesting, with every claim required
+  to cite a real evidence id from the scan or be rejected outright
+- **Report drafting** — `ai report` turns a scored hypothesis and its
+  already-redacted evidence into a clear, human-readable writeup, ready to
+  adapt for a bug bounty submission
+- **Attack-chain discovery** — `ai chains` looks across a scan's
+  hypotheses for plausible multi-step chains a single finding wouldn't
+  reveal on its own (e.g. an exposed parameter feeding a CORS-misconfigured
+  endpoint)
+- **Provider-agnostic** — run it against **Anthropic Claude**, a
+  **self-hosted Ollama** model (fully private, zero data leaves your
+  machine), or **OpenRouter** (access to many models, several genuinely
+  free) — swap providers with one flag, never locked to a vendor
+
+The LLM is a triage assistant, never an authority: it cannot decide scope,
+send a request, or close a finding, and a hallucinated citation is a hard
+failure rather than a warning. See [Safety model](#safety-model) for the
+full list of guarantees this holds to.
 
 ## Features
 
@@ -92,7 +127,7 @@ run but **never sends anything itself.**
 - **This tool never sends the drafted request itself.** A human runs it and
   records the outcome — the only way a hypothesis's status ever changes
 
-**AI layer (fully optional)**
+**AI / LLM layer (fully optional)**
 - `--ai` classifies endpoints with a versioned prompt; every claim must
   cite an id that was actually in the prompt, or it's a hard failure, not
   a warning
