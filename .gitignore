@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environment
+.venv/
+venv/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets / environment
+.env
+
+# Scan output and scope configs -- these describe real targets and/or
+# findings; never commit your own runs or your own scope files.
+results/
+*.results/
+scope.yaml
+scope-*.yaml
+.bundlebleed-history/
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store

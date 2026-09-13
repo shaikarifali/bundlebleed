@@ -1,0 +1,68 @@
+# Dangerous DOM sinks (Phase 3.5 of the plan). A sink match is only reported
+# as a DomFinding when at least one source pattern also appears in the same
+# file (see extractors/dom_analysis.py) — a co-occurrence heuristic, not
+# proof of an actual data flow.
+patterns:
+  - name: document_write
+    regex: 'document\.write\s*\('
+
+  - name: inner_html
+    regex: '\.innerHTML\s*='
+
+  - name: outer_html
+    regex: '\.outerHTML\s*='
+
+  - name: eval_call
+    regex: '\beval\s*\('
+
+  - name: settimeout_string
+    regex: 'setTimeout\s*\(\s*[''"`]'
+
+  - name: setinterval_string
+    regex: 'setInterval\s*\(\s*[''"`]'
+
+  - name: function_ctor
+    regex: '\bFunction\s*\('
+
+  - name: location_href_assign
+    regex: 'location\.href\s*='
+
+  - name: location_assign
+    regex: 'location\.assign\s*\('
+
+  - name: location_replace
+    regex: 'location\.replace\s*\('
+
+  - name: window_open
+    regex: 'window\.open\s*\('
+
+  - name: document_cookie_write
+    regex: 'document\.cookie\s*='
+
+  # Prototype-pollution-prone deep-merge calls. A well-known CVE history
+  # (lodash <4.17.19, jQuery $.extend(true, ...) pre-3.4.0) — flagged as a
+  # distinct "Prototype Pollution" bug class in the hypothesis engine, not
+  # "DOM XSS", even though it reuses the exact same co-occurrence mechanism.
+  - name: lodash_merge
+    regex: '_\.\s*merge\s*\('
+
+  - name: lodash_merge_with
+    regex: '_\.\s*mergeWith\s*\('
+
+  - name: lodash_defaults_deep
+    regex: '_\.\s*defaultsDeep\s*\('
+
+  - name: lodash_zip_object_deep
+    regex: '_\.\s*zipObjectDeep\s*\('
+
+  - name: lodash_set
+    regex: '_\.\s*set\s*\('
+
+  - name: jquery_extend_deep
+    regex: '\$\.extend\s*\(\s*true\s*,'
+
+  - name: deepmerge_call
+    regex: '\bdeepmerge\s*\('
+
+  - name: merge_deep_call
+    regex: '\bmergeDeep\s*\('

@@ -1,0 +1,5 @@
+BUNDLEBLEED-PROMPT-VERSION: endpoint-intel-v1
+Analyze the following candidate API endpoints discovered in JavaScript
+recon. For each <item>, produce exactly one verdict citing its "id".
+
+{evidence_bundle}
