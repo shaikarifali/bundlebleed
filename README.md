@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="BundleBleed logo" width="260">
+</p>
+
 # BundleBleed
 
 **Scope-gated JavaScript reconnaissance for authorized bug bounty testing and pentesting.**
