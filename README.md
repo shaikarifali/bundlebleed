@@ -250,6 +250,113 @@ uv run bundlebleed verify diff --baseline resp-baseline.json --test resp-test.js
 uv run bundlebleed verify record <hypothesis-id> --outcome confirmed -o results/
 ```
 
+## Command reference
+
+Every command below also has full built-in help: `bundlebleed <command> -h`
+(and `bundlebleed <group> <command> -h` for `scope`/`verify`/`ai` subcommands).
+
+### `bundlebleed scan` — collect, extract, score, report
+
+```bash
+uv run bundlebleed scan [OPTIONS]
+```
+
+| Flag | Purpose |
+|---|---|
+| `-t, --target` | One domain, or several comma-separated (`example.com,api.example.com`) |
+| `-tL, --target-list` | A scope file, one domain per line (`*.` wildcard, `!` to exclude) |
+| `--config` | Full `scope.yaml` instead of `-t`/`-tL` — rate limits, authorization attestation, sessions |
+| `--seed-url` | Inject a known URL directly (repeatable) — for a fresh/JS-heavy target with no archive history |
+| `--seed-url-file` | Load seed URLs from a file, one per line |
+| `-o, --output` | Output directory (default `./results`) |
+| `--active / --no-active` | Enable active collectors (e.g. `katana`) — also needs app-config `active_scan_enabled=true` **and** a `scope.yaml` attestation |
+| `--app-config` | App-level `config.yaml` (`active_scan_enabled`, etc.) |
+| `--download / --no-download` | Fetch JS/page bodies for deep extraction (default on); still passive GETs only |
+| `--concurrency` | Max concurrent JS file downloads (default `5`) |
+| `--ai / --no-ai` | Classify collected endpoints with an LLM (off by default) |
+| `--ai-model` | Exact model id — required with `--ai`, never defaulted |
+| `--ai-provider` | `anthropic` (default), `ollama`, or `openrouter` |
+| `--ai-host` | Ollama server URL — required with `--ai-provider ollama` |
+| `--ai-batch-size` | Endpoints per LLM call (default `20`) |
+| `--ai-dry-run` | Show what would be sent to the model without calling it |
+| `--session` | Authenticated session as `name:cookie_string` (repeatable) |
+| `--cookie-file` | Load a session's cookies from a file (raw header, JSON, or Netscape format) |
+| `--draft-verification` | Draft (never send) a baseline/test request pair for IDOR-shaped hypotheses; same 3-gate authorization as `--active` |
+| `--history-dir` | Save + diff this scan against the most recent prior scan of the same target |
+| `--webhook` | Post a change summary here when `--history-dir` finds something changed |
+| `--runtime-capture` | Render pages in headless Chromium and record every real request made; same 3-gate authorization as `--active`; needs `uv sync --extra runtime` |
+| `--runtime-max-pages` | Cap how many pages get rendered (default `10`) |
+| `--runtime-timeout` | Per-page hard timeout in seconds (default `15.0`) |
+
+See [Quick start](#quick-start) above for worked single/multi-domain/config
+examples, and [AI-Powered Analysis](#ai-powered-analysis) for `--ai` examples
+against each provider.
+
+### `bundlebleed scope check` — will a URL be allowed?
+
+```bash
+# Check one URL against a -t/-tL scope, without running a scan
+uv run bundlebleed scope check "https://api.example.com/v1/users" -t example.com
+
+# ...or against a full scope.yaml
+uv run bundlebleed scope check "https://admin.example.com/" --config scope.yaml
+```
+
+Prints `ALLOW: <reason>` or `DENY: <reason>` and exits non-zero on deny —
+useful for sanity-checking a scope file before a real scan.
+
+### `bundlebleed scope list` — print the resolved scope
+
+```bash
+uv run bundlebleed scope list -t example.com,api.example.com
+uv run bundlebleed scope list --config scope.yaml
+```
+
+Prints the resolved in-scope entries, exclusions, excluded paths, and the
+effective rate-limit settings — what the scan will actually enforce.
+
+### `bundlebleed verify diff` — compare two captured responses
+
+```bash
+uv run bundlebleed verify diff --baseline resp-baseline.json --test resp-test.json
+```
+
+Takes two JSON files you produced yourself (`{"status_code": int, "body": str}`)
+after running a drafted verification request. Never sends anything — pure
+local comparison (status match, body-length delta, JSON keys added/removed,
+sensitive fields appearing in the test response).
+
+### `bundlebleed verify record` — log what you found
+
+```bash
+uv run bundlebleed verify record <hypothesis-id> --outcome confirmed -o results/
+uv run bundlebleed verify record <hypothesis-id> --outcome rejected --note "returned 403" -o results/
+```
+
+`--outcome` is one of `confirmed`, `rejected`, `inconclusive`. This is the
+**only** way a hypothesis's status ever changes — always a human decision.
+
+### `bundlebleed ai report` — draft a report from a hypothesis
+
+```bash
+uv run bundlebleed ai report <hypothesis-id> --model claude-opus-5 -o results/
+uv run bundlebleed ai report <hypothesis-id> --model llama3 --provider ollama --host http://localhost:11434 -o results/
+uv run bundlebleed ai report <hypothesis-id> --model meta-llama/llama-3.1-8b-instruct:free --provider openrouter -o results/
+```
+
+Writes `report-draft.md` from the hypothesis's own already-redacted
+evidence. Never submitted anywhere by this tool.
+
+### `bundlebleed ai chains` — suggest connections between findings
+
+```bash
+uv run bundlebleed ai chains -o results/ --model claude-opus-5
+uv run bundlebleed ai chains -o results/ --model llama3 --provider ollama --host http://localhost:11434
+```
+
+Reads an existing scan's `scan-result.json` and writes `attack-chains.md`.
+Pure analysis — never a claim that a chain was tested or works.
+
 ## What it deliberately doesn't do
 
 - Send a verification or exploitation request itself — always human-fired,
