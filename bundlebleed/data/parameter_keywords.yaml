@@ -1,0 +1,24 @@
+# Substring keywords (case-insensitive) used to filter variable declarations
+# down to security-interesting parameter names (Phase 3.4 of the plan).
+keywords:
+  - id
+  - token
+  - role
+  - admin
+  - redirect
+  - auth
+  - user
+  - session
+  - key
+  - secret
+  - permission
+  - access
+  - scope
+  - grant
+  - url
+  - uri
+  - webhook
+  - callback
+  - proxy
+  - endpoint
+  - host

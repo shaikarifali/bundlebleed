@@ -1,0 +1,49 @@
+# Endpoint extraction patterns. Each has an optional capture `group` (defaults
+# to the whole match) used as the extracted value.
+patterns:
+  - name: rest_api_path
+    regex: '/api/[a-zA-Z0-9_\-/{}:]+'
+
+  - name: express_style_param
+    regex: '/[a-zA-Z]+/:[a-zA-Z]+'
+
+  - name: openapi_style_param
+    regex: '/[a-zA-Z]+/\{[a-zA-Z]+\}'
+
+  - name: fetch_call
+    regex: 'fetch\s*\(\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: axios_call
+    regex: 'axios\.(?:get|post|put|patch|delete)\s*\(\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: jquery_ajax
+    regex: '\.ajax\s*\(\s*\{[^}]*url\s*:\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: jquery_get_post
+    regex: '\$\.(?:get|post)\s*\(\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: axios_shorthand
+    regex: 'axios\s*\(\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: axios_config_object
+    regex: 'axios\s*\(\s*\{[^}]*url\s*:\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: xhr_open
+    regex: '\.open\s*\(\s*[''"`](?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)[''"`]\s*,\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: send_beacon
+    regex: 'sendBeacon\s*\(\s*[''"`]([^''"`]+)'
+    group: 1
+
+  - name: graphql_endpoint
+    regex: '/(?:api/)?graphql[a-zA-Z0-9_\-/]*'
+
+  - name: websocket_url
+    regex: 'wss?://[a-zA-Z0-9.\-]+(?::\d+)?[a-zA-Z0-9_\-/]*'

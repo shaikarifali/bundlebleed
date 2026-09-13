@@ -1,0 +1,28 @@
+# User-controllable sources (Phase 3.5 of the plan).
+patterns:
+  - name: location_hash
+    regex: 'location\.hash'
+
+  - name: location_search
+    regex: 'location\.search'
+
+  - name: location_href_read
+    regex: 'location\.href'
+
+  - name: document_referrer
+    regex: 'document\.referrer'
+
+  - name: window_name
+    regex: 'window\.name'
+
+  - name: document_cookie_read
+    regex: 'document\.cookie'
+
+  - name: post_message_data
+    regex: '(?:event|evt|e)\.data\b'
+
+  - name: local_storage_read
+    regex: 'localStorage\.getItem'
+
+  - name: session_storage_read
+    regex: 'sessionStorage\.getItem'

@@ -1,0 +1,15 @@
+patterns:
+  - name: react
+    regex: 'React\.createElement|__REACT_DEVTOOLS|REACT_APP_|react-dom'
+
+  - name: angular
+    regex: 'angular\.module|ng-app|@angular/core|zone\.js'
+
+  - name: vue
+    regex: '__VUE__|Vue\.component|createApp\('
+
+  - name: nextjs
+    regex: '__NEXT_DATA__|_next/static|NEXT_PUBLIC_'
+
+  - name: nuxt
+    regex: '__NUXT__|\$nuxt'

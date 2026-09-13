@@ -1,0 +1,10 @@
+# In-scope domains (one per line) — this is what -tL reads.
+# Any number of domains, mixed exact and wildcard, all in one file.
+example.com
+*.example.com
+api.example.org
+shop.example.org
+
+# Lines starting with ! are out-of-scope, checked against every domain above
+!blog.example.com
+!staging.example.org

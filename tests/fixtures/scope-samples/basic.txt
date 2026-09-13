@@ -1,0 +1,7 @@
+# comment line, should be ignored
+example.com
+*.example.com
+api.example.com
+
+!blog.example.com
+!*.wordpress.example.com
