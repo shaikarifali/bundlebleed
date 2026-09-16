@@ -10,7 +10,7 @@
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="LLM-powered" src="https://img.shields.io/badge/AI%2FLLM-Claude%20%7C%20Ollama%20%7C%20OpenRouter-purple">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-427%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-438%20passing-brightgreen">
 </p>
 
 BundleBleed collects a target's client-side JavaScript and server-rendered
@@ -120,7 +120,16 @@ full list of guarantees this holds to.
   filtered out explicitly), and known-vulnerable third-party library
   versions fingerprinted from their own preserved banner comments
   (Retire.js-style, matched against a small curated list of real CVEs —
-  jQuery, Lodash, Moment.js, AngularJS, Handlebars, Bootstrap, jQuery UI)
+  jQuery, Lodash, Moment.js, AngularJS, Handlebars, Bootstrap, jQuery UI),
+  and named GraphQL mutations (a lightweight schema-reconstruction
+  inventory — a mutation whose name suggests it crosses an authorization
+  boundary, e.g. `deleteUser`/`updateRole`/`grantAccess`, is flagged high;
+  any other mutation, medium — queries/subscriptions are inventoried in
+  the report but never scored as a finding on their own)
+- `location.href`/`.assign()`/`.replace()`/`window.open()` sinks are
+  labeled **Open Redirect**, not generic DOM XSS — a real, separately
+  reportable bug class (e.g. an OAuth `redirect_uri` open redirect chains
+  directly to auth-code/token theft)
 - In-domain subdomains, security-interesting parameters (from both JS
   declarations and URL query strings), DOM-XSS sink/source co-occurrence
 - Source maps are followed and, when a map embeds `sourcesContent`, the
@@ -326,6 +335,22 @@ uv run bundlebleed scan [OPTIONS]
 See [Quick start](#quick-start) above for worked single/multi-domain/config
 examples, and [AI-Powered Analysis](#ai-powered-analysis) for `--ai` examples
 against each provider.
+
+### `bundlebleed monitor` — repeatedly re-scan and alert on change
+
+```bash
+uv run bundlebleed monitor -t example.com -o results/ --interval-seconds 3600 \
+  --webhook https://hooks.slack.com/services/...
+
+# Run one scan and exit -- confirm setup before leaving it running
+uv run bundlebleed monitor -t example.com -o results/ --once
+```
+
+A thin loop around `scan --history-dir ... --webhook ...`: every invariant
+`scan` holds (passive-by-default, ScopeGuard on every request) applies
+identically. Silent unless a scan actually differs from the one before it
+(new/removed endpoints, secrets, subdomains, or an access-control
+regression). Stop with Ctrl-C at any time.
 
 ### `bundlebleed scope check` — will a URL be allowed?
 

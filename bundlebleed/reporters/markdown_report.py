@@ -204,6 +204,16 @@ def render_markdown(result: ScanResult) -> str:
                 f"| {lib.cve} | {lib.severity} | {lib.source_url} |"
             )
 
+    lines += ["", "## GraphQL operations", ""]
+
+    if not r.graphql_operations:
+        lines.append("_None found._")
+    else:
+        lines.append("| Type | Name | Source |")
+        lines.append("|---|---|---|")
+        for op in r.graphql_operations:
+            lines.append(f"| {op.operation_type} | {op.operation_name} | {op.source_url} |")
+
     lines += ["", "## Files analyzed", ""]
 
     if not r.files:

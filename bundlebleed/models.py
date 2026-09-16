@@ -109,6 +109,19 @@ class WebSocketFinding(BaseModel):
     snippet_preview: str
 
 
+class GraphQLOperation(BaseModel):
+    """A query/mutation/subscription operation name extracted from a JS
+    bundle (e.g. a graphql-tag template literal reading
+    'mutation UpdateRole { ... }') — a lightweight schema-reconstruction
+    inventory, not a full type-system parse. A mutation is the
+    highest-signal entry here: it reveals a state-changing server
+    capability that may not appear anywhere in the visible UI."""
+
+    operation_type: str
+    operation_name: str
+    source_url: str
+
+
 class MassAssignmentFinding(BaseModel):
     """A privileged-looking field (role/isAdmin/permissions/ownerId/...)
     assigned inside an object literal near a state-changing (PATCH/PUT/
@@ -181,6 +194,7 @@ class ScanResult(BaseModel):
     websocket_findings: list[WebSocketFinding] = Field(default_factory=list)
     mass_assignment_findings: list[MassAssignmentFinding] = Field(default_factory=list)
     vulnerable_libraries: list[VulnerableLibraryFinding] = Field(default_factory=list)
+    graphql_operations: list[GraphQLOperation] = Field(default_factory=list)
     graph_stats: GraphStats | None = None
     endpoint_schema_discrepancy: SchemaDiscrepancy | None = None
     ai_verdicts: list[AIEndpointVerdict] = Field(default_factory=list)
@@ -225,6 +239,9 @@ class ScanResult(BaseModel):
         unique_vulnerable_libraries = {
             (v.source_url, v.library_name, v.detected_version): v for v in self.vulnerable_libraries
         }
+        unique_graphql_operations = {
+            (g.operation_type, g.operation_name, g.source_url): g for g in self.graphql_operations
+        }
         unique_ai_verdicts = {v.evidence_id: v for v in self.ai_verdicts}
         unique_hypotheses = {h.id: h for h in self.hypotheses}
 
@@ -268,6 +285,10 @@ class ScanResult(BaseModel):
                 "vulnerable_libraries": sorted(
                     unique_vulnerable_libraries.values(),
                     key=lambda v: (v.source_url, v.library_name, v.detected_version),
+                ),
+                "graphql_operations": sorted(
+                    unique_graphql_operations.values(),
+                    key=lambda g: (g.operation_type, g.operation_name, g.source_url),
                 ),
                 "ai_verdicts": sorted(unique_ai_verdicts.values(), key=lambda v: v.evidence_id),
                 "ai_injection_flags": sorted(set(self.ai_injection_flags)),

@@ -31,6 +31,24 @@ _PROTOTYPE_POLLUTION_SINKS = {
     "deepmerge_call",
     "merge_deep_call",
 }
+# Navigation sinks -- distinct from generic DOM XSS: the impact of an
+# attacker-controlled value reaching these is redirecting the victim, not
+# script execution. Real disclosed reports (e.g. OAuth redirect_uri open
+# redirects) treat this as its own bug class.
+_OPEN_REDIRECT_SINKS = {
+    "location_href_assign",
+    "location_assign",
+    "location_replace",
+    "window_open",
+}
+# A mutation whose name suggests it crosses an authorization/tenant
+# boundary -- high risk. Any other named mutation is still a real,
+# previously-unlisted state-changing capability, just a narrower blast
+# radius by default -- medium, never low/info.
+_SENSITIVE_MUTATION_NAME_RE = re.compile(
+    r"(?i)delete|remove|admin|role|permission|export|grant|promote|impersonate|"
+    r"transfer|refund|credit|disable|enable|verify|ban|suspend|reset|password"
+)
 
 
 def _has_numeric_id_query_param(value: str) -> bool:
@@ -316,6 +334,7 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
         hid = stable_id("dom", finding.sink_pattern, finding.source_url)
         confidence = min(0.3 + 0.1 * len(finding.co_occurring_sources), 0.6)
         is_proto_pollution = finding.sink_pattern in _PROTOTYPE_POLLUTION_SINKS
+        is_open_redirect = finding.sink_pattern in _OPEN_REDIRECT_SINKS
         if is_proto_pollution:
             bug_class = "Prototype Pollution"
             proposed_test = (
@@ -323,6 +342,16 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
                 "this merge call unsanitized (e.g. via '__proto__'/'constructor.prototype'); "
                 "only craft a non-destructive PoC (a benign added property, never a "
                 "destructive one) after manual confirmation."
+            )
+        elif is_open_redirect:
+            bug_class = "Open Redirect"
+            proposed_test = (
+                "Trace whether the co-occurring source (location.search/hash, "
+                "document.referrer, or similar) reaches this navigation call "
+                "unvalidated; if so, craft a URL pointing to a domain you control and "
+                "confirm the victim's browser is actually redirected there. Especially "
+                "high-impact if this redirect sits in an OAuth/SSO flow (redirect_uri, "
+                "return_to, next) — chains directly to auth-code/token theft."
             )
         else:
             bug_class = "DOM XSS"
@@ -517,6 +546,35 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
                     "application: confirm the specific vulnerable code path the CVE "
                     "describes is actually reachable and fed attacker-controlled input "
                     "before reporting."
+                ),
+            )
+        )
+
+    for op in result.graphql_operations:
+        if op.operation_type != "mutation":
+            # Queries/subscriptions are pure inventory (shown in reports)
+            # -- not a finding on their own, so no hypothesis/severity.
+            continue
+        hid = stable_id("graphql_mutation", op.source_url, op.operation_name)
+        is_sensitive = bool(_SENSITIVE_MUTATION_NAME_RE.search(op.operation_name))
+        hypotheses.append(
+            Hypothesis(
+                id=hid,
+                target_kind="graphql_mutation",
+                target_value=op.operation_name,
+                source_url=op.source_url,
+                bug_classes=["GraphQL Mutation Exposed"],
+                evidence_chain=[
+                    f"Mutation '{op.operation_name}' found in {op.source_url}",
+                ],
+                confidence=0.3,
+                risk="high" if is_sensitive else "medium",
+                proposed_test=(
+                    "Confirm this mutation is reachable from the GraphQL endpoint and "
+                    "check its authorization: call it with a low-privilege authenticated "
+                    "session and, separately, with no authentication at all. Do not "
+                    "execute a state-changing call against real data without an "
+                    "explicitly authorized, controlled account."
                 ),
             )
         )

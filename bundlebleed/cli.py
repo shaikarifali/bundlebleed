@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,6 +42,7 @@ from bundlebleed.extractors.cors import extract_cors_misconfiguration
 from bundlebleed.extractors.dependencies import extract_vulnerable_libraries
 from bundlebleed.extractors.dom_analysis import extract_dom_findings
 from bundlebleed.extractors.endpoints import extract_endpoints
+from bundlebleed.extractors.graphql import extract_graphql_operations
 from bundlebleed.extractors.html_links import extract_html_endpoints, extract_third_party_scripts
 from bundlebleed.extractors.mass_assignment import extract_mass_assignment_findings
 from bundlebleed.extractors.messaging import (
@@ -635,6 +637,7 @@ def scan(
     websocket_findings = []
     mass_assignment_findings = []
     vulnerable_libraries = []
+    graphql_operations = []
     for fetched in fetched_files:
         beautified = beautify(fetched.content)
 
@@ -647,6 +650,7 @@ def scan(
         websocket_findings.extend(extract_websocket_findings(beautified, fetched.url))
         mass_assignment_findings.extend(extract_mass_assignment_findings(beautified, fetched.url))
         vulnerable_libraries.extend(extract_vulnerable_libraries(beautified, fetched.url))
+        graphql_operations.extend(extract_graphql_operations(beautified, fetched.url))
         cors_finding = extract_cors_misconfiguration(fetched.headers, fetched.url)
         if cors_finding is not None:
             cors_findings.append(cors_finding)
@@ -673,6 +677,7 @@ def scan(
         websocket_findings.extend(extract_websocket_findings(page.content, page.url))
         mass_assignment_findings.extend(extract_mass_assignment_findings(page.content, page.url))
         vulnerable_libraries.extend(extract_vulnerable_libraries(page.content, page.url))
+        graphql_operations.extend(extract_graphql_operations(page.content, page.url))
         page_cors_finding = extract_cors_misconfiguration(page.headers, page.url)
         if page_cors_finding is not None:
             cors_findings.append(page_cors_finding)
@@ -690,6 +695,7 @@ def scan(
         websocket_findings.extend(extract_websocket_findings(beautified, fetched.url))
         mass_assignment_findings.extend(extract_mass_assignment_findings(beautified, fetched.url))
         vulnerable_libraries.extend(extract_vulnerable_libraries(beautified, fetched.url))
+        graphql_operations.extend(extract_graphql_operations(beautified, fetched.url))
         auth_cors_finding = extract_cors_misconfiguration(fetched.headers, fetched.url)
         if auth_cors_finding is not None:
             cors_findings.append(auth_cors_finding)
@@ -749,6 +755,7 @@ def scan(
                     extract_mass_assignment_findings(beautified, fetched.url)
                 )
                 vulnerable_libraries.extend(extract_vulnerable_libraries(beautified, fetched.url))
+                graphql_operations.extend(extract_graphql_operations(beautified, fetched.url))
                 runtime_cors_finding = extract_cors_misconfiguration(fetched.headers, fetched.url)
                 if runtime_cors_finding is not None:
                     cors_findings.append(runtime_cors_finding)
@@ -789,6 +796,7 @@ def scan(
         websocket_findings=websocket_findings,
         mass_assignment_findings=mass_assignment_findings,
         vulnerable_libraries=vulnerable_libraries,
+        graphql_operations=graphql_operations,
         endpoint_schema_discrepancy=endpoint_schema_discrepancy(url_endpoints, body_endpoints),
         auth_only_js_urls=auth_only_js_urls,
         runtime_confirmed_paths=runtime_confirmed_paths,
@@ -965,6 +973,93 @@ def scan(
         f"wordlists written to {wordlist_paths['urls'].parent}/ "
         "(urls/endpoints/parameters/subdomains/third-party-hosts.txt)"
     )
+
+
+_MONITOR_EXAMPLES = """\
+Examples:
+
+  bundlebleed monitor -t example.com -o results/ --interval-seconds 3600 \\
+    --webhook https://hooks.slack.com/services/...
+
+  bundlebleed monitor -tL examples/scope-multi-domain.txt -o results/ --interval-seconds 86400
+
+  # Run one scan and exit -- useful to confirm setup before leaving it running:
+  bundlebleed monitor -t example.com -o results/ --once
+"""
+
+
+@app.command(epilog=_MONITOR_EXAMPLES)
+def monitor(
+    target: Annotated[str | None, typer.Option("-t", "--target")] = None,
+    target_list: Annotated[Path | None, typer.Option("-tL", "--target-list")] = None,
+    config: Annotated[Path | None, typer.Option("--config")] = None,
+    output: Annotated[Path, typer.Option("-o", "--output", help="Output directory")] = Path(
+        "./results"
+    ),
+    interval_seconds: Annotated[
+        int,
+        typer.Option(
+            "--interval-seconds",
+            help="Seconds to wait between scans (default 3600 = 1 hour).",
+        ),
+    ] = 3600,
+    webhook: Annotated[
+        str | None,
+        typer.Option(
+            "--webhook",
+            help="Post a change summary here (Slack/Discord-compatible) whenever a scan "
+            "finds a difference from the previous one. Silent on the first scan and on "
+            "any scan with no changes.",
+        ),
+    ] = None,
+    session: Annotated[
+        list[str] | None,
+        typer.Option("--session", help="Authenticated session as 'name:cookie_string'."),
+    ] = None,
+    cookie_file: Annotated[
+        Path | None,
+        typer.Option("--cookie-file", help="Load a session's cookies from a file."),
+    ] = None,
+    once: Annotated[
+        bool,
+        typer.Option(
+            "--once",
+            help="Run exactly one scan and exit instead of looping forever -- useful to "
+            "confirm the command is set up correctly before leaving it running.",
+        ),
+    ] = False,
+) -> None:
+    """Repeatedly re-scan the same target on a fixed interval, diffing each
+    run against the one before it and posting to --webhook only when
+    something actually changed (new/removed endpoints, secrets,
+    subdomains, or an access-control regression). This is a thin loop
+    around `bundlebleed scan --history-dir ... --webhook ...` -- every
+    invariant `scan` holds (passive-by-default, ScopeGuard on every
+    request, nothing sent without --active/--draft-verification) applies
+    identically here. Stop with Ctrl-C at any time."""
+    history_dir = output / ".bundlebleed-history"
+    iteration = 0
+    while True:
+        iteration += 1
+        typer.echo(f"--- monitor: scan #{iteration} starting ---")
+        scan(
+            target=target,
+            target_list=target_list,
+            config=config,
+            output=output,
+            history_dir=history_dir,
+            webhook=webhook,
+            session=session,
+            cookie_file=cookie_file,
+        )
+        if once:
+            break
+        typer.echo(f"--- monitor: sleeping {interval_seconds}s until next scan ---")
+        try:
+            time.sleep(interval_seconds)
+        except KeyboardInterrupt:
+            typer.echo("monitor: stopped")
+            break
 
 
 @scope_app.command("check")

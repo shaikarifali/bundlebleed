@@ -343,6 +343,12 @@ mount("vulnerable-libraries-table", DATA.vulnerable_libraries, [
   { key: "source_url", label: "Source" },
 ], "No vulnerable libraries found.");
 
+mount("graphql-operations-table", DATA.graphql_operations, [
+  { key: "operation_type", label: "Type" },
+  { key: "operation_name", label: "Name" },
+  { key: "source_url", label: "Source" },
+], "No GraphQL operations found.");
+
 mount("files-table", DATA.files, [
   { key: "url", label: "URL" },
   { key: "frameworks", label: "Frameworks", get: (r) => r.frameworks.join(", ") },
@@ -392,6 +398,7 @@ def render_html(result: ScanResult) -> str:
         ("WebSocket findings", len(r.websocket_findings)),
         ("Mass assignment findings", len(r.mass_assignment_findings)),
         ("Vulnerable libraries", len(r.vulnerable_libraries)),
+        ("GraphQL operations", len(r.graphql_operations)),
         ("Hypotheses", len(r.hypotheses)),
     ]
     tiles_html = "".join(
@@ -446,6 +453,9 @@ def render_html(result: ScanResult) -> str:
 
 <h2>Vulnerable libraries</h2>
 <div id="vulnerable-libraries-table"></div>
+
+<h2>GraphQL operations</h2>
+<div id="graphql-operations-table"></div>
 
 <h2>Files analyzed</h2>
 <div id="files-table"></div>

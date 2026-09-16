@@ -9,6 +9,7 @@ from bundlebleed.models import (
     CorsMisconfiguration,
     DomFinding,
     Endpoint,
+    GraphQLOperation,
     MassAssignmentFinding,
     PostMessageFinding,
     ScanResult,
@@ -228,6 +229,30 @@ def test_jquery_extend_deep_sink_generates_prototype_pollution() -> None:
     assert hypotheses[0].bug_classes == ["Prototype Pollution"]
 
 
+def test_location_href_assign_sink_generates_open_redirect_not_dom_xss() -> None:
+    finding = DomFinding(
+        sink_pattern="location_href_assign",
+        sink_value="location.href =",
+        co_occurring_sources=["location_search"],
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(dom_findings=[finding]))
+    assert len(hypotheses) == 1
+    assert hypotheses[0].bug_classes == ["Open Redirect"]
+    assert "redirect_uri" in hypotheses[0].proposed_test
+
+
+def test_window_open_sink_generates_open_redirect() -> None:
+    finding = DomFinding(
+        sink_pattern="window_open",
+        sink_value="window.open(",
+        co_occurring_sources=["location_hash"],
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(dom_findings=[finding]))
+    assert hypotheses[0].bug_classes == ["Open Redirect"]
+
+
 def test_jwt_alg_none_secret_generates_authentication_bypass_hypothesis() -> None:
     secret = Secret(
         secret_type="jwt_alg_none",
@@ -438,6 +463,33 @@ def test_vulnerable_library_finding_generates_expected_hypothesis() -> None:
     assert hypotheses[0].bug_classes == ["Known-Vulnerable JS Dependency"]
     assert hypotheses[0].risk == "high"
     assert "CVE-2020-11022" in hypotheses[0].evidence_chain[1]
+
+
+def test_sensitive_named_mutation_generates_high_risk_hypothesis() -> None:
+    op = GraphQLOperation(
+        operation_type="mutation", operation_name="DeleteUser", source_url="https://e.com/app.js"
+    )
+    hypotheses = generate_hypotheses(_result(graphql_operations=[op]))
+    assert len(hypotheses) == 1
+    assert hypotheses[0].bug_classes == ["GraphQL Mutation Exposed"]
+    assert hypotheses[0].risk == "high"
+
+
+def test_non_sensitive_named_mutation_generates_medium_risk_hypothesis() -> None:
+    op = GraphQLOperation(
+        operation_type="mutation", operation_name="UpdateProfile", source_url="https://e.com/app.js"
+    )
+    hypotheses = generate_hypotheses(_result(graphql_operations=[op]))
+    assert len(hypotheses) == 1
+    assert hypotheses[0].risk == "medium"
+
+
+def test_graphql_query_does_not_generate_a_hypothesis() -> None:
+    op = GraphQLOperation(
+        operation_type="query", operation_name="GetUser", source_url="https://e.com/app.js"
+    )
+    hypotheses = generate_hypotheses(_result(graphql_operations=[op]))
+    assert hypotheses == []
 
 
 def test_hypothesis_ids_are_stable_and_unique_across_target_kinds() -> None:
