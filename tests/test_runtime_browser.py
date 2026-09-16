@@ -107,3 +107,63 @@ def test_discovered_js_urls_only_includes_allowed_script_requests() -> None:
 
     assert "https://example.com/app.js" in capture.discovered_js_urls
     assert "https://not-in-scope.invalid/evil.js" not in capture.discovered_js_urls
+
+
+def test_session_name_is_carried_onto_the_capture_result() -> None:
+    guard = ScopeGuard(_scope())
+
+    capture = asyncio.run(
+        capture_page(
+            _data_url("<html></html>"),
+            guard,
+            timeout_seconds=5.0,
+            on_allowed=_fulfill_locally,
+            cookie_header="session=abc123",
+            session_name="admin",
+        )
+    )
+
+    assert capture.session_name == "admin"
+
+
+def test_unauthenticated_capture_has_no_session_name() -> None:
+    guard = ScopeGuard(_scope())
+
+    capture = asyncio.run(
+        capture_page(
+            _data_url("<html></html>"), guard, timeout_seconds=5.0, on_allowed=_fulfill_locally
+        )
+    )
+
+    assert capture.session_name is None
+
+
+def test_cookie_header_is_attached_to_every_request_the_context_makes() -> None:
+    """A page that's gated on auth state only lazy-loads its authenticated
+    chunk if the request actually carries the session cookie — this proves
+    the cookie reaches the request, not just that it was accepted as an
+    argument."""
+    guard = ScopeGuard(_scope())
+    html = (
+        "<html><body><script>"
+        "fetch('https://example.com/admin-chunk.js').catch(()=>{});"
+        "</script></body></html>"
+    )
+    seen_cookie_headers: list[str | None] = []
+
+    async def _record_cookie_and_fulfill(route: Any) -> None:
+        headers = route.request.headers
+        seen_cookie_headers.append(headers.get("cookie"))
+        await route.fulfill(status=200, content_type="application/javascript", body="// ok")
+
+    asyncio.run(
+        capture_page(
+            _data_url(html),
+            guard,
+            timeout_seconds=5.0,
+            on_allowed=_record_cookie_and_fulfill,
+            cookie_header="session=abc123",
+        )
+    )
+
+    assert "session=abc123" in seen_cookie_headers

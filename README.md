@@ -10,7 +10,7 @@
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="LLM-powered" src="https://img.shields.io/badge/AI%2FLLM-Claude%20%7C%20Ollama%20%7C%20OpenRouter-purple">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-359%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-362%20passing-brightgreen">
 </p>
 
 BundleBleed collects a target's client-side JavaScript and server-rendered
@@ -119,6 +119,15 @@ full list of guarantees this holds to.
   automation) and headless-browser runtime capture (every request
   individually scope-checked before it's allowed to fire) feed real
   signal into the same scoring
+- **Authenticated runtime capture**: when a session is given alongside
+  `--runtime-capture`, every page is *also* rendered in the headless
+  browser with that session's cookie attached — so client-side routing
+  gated on auth state (an admin panel that only lazy-loads its JS chunk
+  for a logged-in user, for example) actually renders, and whatever chunk
+  it loads gets pulled in and analyzed too. A JS chunk that only shows up
+  in the authenticated pass is flagged the same way as any other
+  auth-only finding — untouched-by-unauthenticated-scanners surface is
+  exactly where a missing RBAC check tends to live
 
 **Verification — always human-fired**
 - For IDOR hypotheses with a concrete numeric id, drafts exactly one test
@@ -279,12 +288,12 @@ uv run bundlebleed scan [OPTIONS]
 | `--ai-host` | Ollama server URL — required with `--ai-provider ollama` |
 | `--ai-batch-size` | Endpoints per LLM call (default `20`) |
 | `--ai-dry-run` | Show what would be sent to the model without calling it |
-| `--session` | Authenticated session as `name:cookie_string` (repeatable) |
+| `--session` | Authenticated session as `name:cookie_string` (repeatable) — also feeds an authenticated pass of `--runtime-capture`, if given |
 | `--cookie-file` | Load a session's cookies from a file (raw header, JSON, or Netscape format) |
 | `--draft-verification` | Draft (never send) a baseline/test request pair for IDOR-shaped hypotheses; same 3-gate authorization as `--active` |
 | `--history-dir` | Save + diff this scan against the most recent prior scan of the same target |
 | `--webhook` | Post a change summary here when `--history-dir` finds something changed |
-| `--runtime-capture` | Render pages in headless Chromium and record every real request made; same 3-gate authorization as `--active`; needs `uv sync --extra runtime` |
+| `--runtime-capture` | Render pages in headless Chromium and record every real request made; with `--session`/`--cookie-file`, also re-renders each page authenticated so auth-gated client-side routing (and the JS chunk behind it) actually loads; same 3-gate authorization as `--active`; needs `uv sync --extra runtime` |
 | `--runtime-max-pages` | Cap how many pages get rendered (default `10`) |
 | `--runtime-timeout` | Per-page hard timeout in seconds (default `15.0`) |
 

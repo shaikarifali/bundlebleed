@@ -68,6 +68,7 @@ from bundlebleed.reporters.json_report import write_json_report
 from bundlebleed.reporters.markdown_report import write_markdown_report
 from bundlebleed.reporters.wordlists import write_wordlists
 from bundlebleed.runtime.browser import PlaywrightNotInstalledError, capture_runtime
+from bundlebleed.runtime.models import RuntimeCapture
 from bundlebleed.scope.guard import ScopeGuard
 from bundlebleed.scope.models import ScopeConfig
 from bundlebleed.scope.parser import load_scope_config
@@ -464,8 +465,13 @@ def scan(
             "page actually makes (dynamic JS chunks, real fetch/XHR calls) — every single "
             "request, including redirects, is checked against ScopeGuard and aborted if "
             "out of scope. Observation only: no clicks, no form submission, no keystrokes. "
-            "Requires the same 3-gate active-scan authorization as --active, and the "
-            "optional 'playwright' dependency (pip install 'bundlebleed[runtime]').",
+            "If --session/--cookie-file is also given, each page is re-rendered per session "
+            "with that cookie attached, so client-side routing gated on auth state (e.g. an "
+            "admin panel that only lazy-loads its JS chunk for a logged-in user) renders too "
+            "— any JS chunk found only in an authenticated pass is flagged the same way as an "
+            "auth-only endpoint. Requires the same 3-gate active-scan authorization as "
+            "--active, and the optional 'playwright' dependency "
+            "(pip install 'bundlebleed[runtime]').",
         ),
     ] = False,
     runtime_max_pages: Annotated[
@@ -536,7 +542,8 @@ def scan(
             )
         )
 
-    runtime_captures = []
+    runtime_captures: list[RuntimeCapture] = []
+    auth_runtime_captures: list[RuntimeCapture] = []
     if runtime_capture:
         if not active_scan_authorized(app_config, scope_config, active):
             typer.echo(
@@ -554,6 +561,25 @@ def scan(
                         timeout_seconds=runtime_timeout,
                     )
                 )
+                # A logged-out browser never lazy-loads an admin-only route's
+                # JS chunk in the first place -- rerun the same pages WITH
+                # each session's cookie so client-side routing that's gated
+                # on auth state actually renders, and whatever it chunk-loads
+                # is captured too. Still no login is performed: the cookie
+                # must already be provided.
+                for sess in sessions:
+                    auth_runtime_captures.extend(
+                        asyncio.run(
+                            capture_runtime(
+                                candidate_pages,
+                                guard,
+                                max_pages=runtime_max_pages,
+                                timeout_seconds=runtime_timeout,
+                                cookie_header=sess.cookie_header,
+                                session_name=sess.name,
+                            )
+                        )
+                    )
             except PlaywrightNotInstalledError as exc:
                 typer.echo(f"note: --runtime-capture skipped: {exc}")
 
@@ -630,21 +656,35 @@ def scan(
         )
         auth_only_js_urls.append(fetched.url)
 
+    all_runtime_captures = runtime_captures + auth_runtime_captures
     runtime_confirmed_paths: list[str] = []
-    for capture in runtime_captures:
+    for capture in all_runtime_captures:
         for event in capture.events:
             if event.allowed:
                 runtime_confirmed_paths.append(urlsplit(event.url).path)
 
-    if runtime_captures:
+    if all_runtime_captures:
         known_js_urls = {f.url for f in fetched_files} | {f.url for f, _ in auth_fetched}
-        new_runtime_js_urls = sorted(
-            {u for capture in runtime_captures for u in capture.discovered_js_urls} - known_js_urls
-        )
-        if new_runtime_js_urls:
-            runtime_fetched = asyncio.run(
-                _fetch_runtime_js(new_runtime_js_urls, guard, scope_config, concurrency)
-            )
+        unauth_runtime_js_urls = {u for c in runtime_captures for u in c.discovered_js_urls}
+
+        # A chunk found in the logged-out pass too isn't auth-gated, even if
+        # an authenticated pass also happened to load it.
+        auth_only_session_by_url: dict[str, str] = {}
+        for capture in auth_runtime_captures:
+            for url in capture.discovered_js_urls:
+                if url not in known_js_urls and url not in unauth_runtime_js_urls:
+                    auth_only_session_by_url.setdefault(url, capture.session_name or "")
+
+        new_runtime_js_urls = sorted(unauth_runtime_js_urls - known_js_urls)
+        auth_only_runtime_js_urls = sorted(auth_only_session_by_url)
+
+        for urls, tag_session in (
+            (new_runtime_js_urls, False),
+            (auth_only_runtime_js_urls, True),
+        ):
+            if not urls:
+                continue
+            runtime_fetched = asyncio.run(_fetch_runtime_js(urls, guard, scope_config, concurrency))
             for fetched in runtime_fetched:
                 beautified = beautify(fetched.content)
 
@@ -664,9 +704,14 @@ def scan(
                         source_map_found=fetched.source_map_found,
                         source_map_url=fetched.source_map_url,
                         discovered_via_runtime=True,
+                        discovered_via_session=(
+                            auth_only_session_by_url.get(fetched.url) if tag_session else None
+                        ),
                         recovered_from_source_map=fetched.recovered_from_source_map,
                     )
                 )
+                if tag_session:
+                    auth_only_js_urls.append(fetched.url)
 
     endpoints = url_endpoints + body_endpoints
 
