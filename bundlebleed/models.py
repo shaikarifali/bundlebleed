@@ -54,6 +54,19 @@ class SubdomainFinding(BaseModel):
     note: str
 
 
+class DanglingCnameFinding(BaseModel):
+    """A discovered subdomain whose CNAME points at a service with a
+    documented history of unclaimed-record takeover (GitHub Pages,
+    Heroku, S3, ...). DNS resolution only -- this tool never makes an
+    HTTP request to the CNAME target (it's outside the declared scope by
+    definition), so this is a candidate for manual verification, never a
+    confirmed takeover."""
+
+    domain: str
+    cname_target: str
+    service_hint: str
+
+
 class ParameterFinding(BaseModel):
     name: str
     source_url: str
@@ -195,6 +208,7 @@ class ScanResult(BaseModel):
     mass_assignment_findings: list[MassAssignmentFinding] = Field(default_factory=list)
     vulnerable_libraries: list[VulnerableLibraryFinding] = Field(default_factory=list)
     graphql_operations: list[GraphQLOperation] = Field(default_factory=list)
+    dangling_cnames: list[DanglingCnameFinding] = Field(default_factory=list)
     graph_stats: GraphStats | None = None
     endpoint_schema_discrepancy: SchemaDiscrepancy | None = None
     ai_verdicts: list[AIEndpointVerdict] = Field(default_factory=list)
@@ -242,6 +256,7 @@ class ScanResult(BaseModel):
         unique_graphql_operations = {
             (g.operation_type, g.operation_name, g.source_url): g for g in self.graphql_operations
         }
+        unique_dangling_cnames = {d.domain: d for d in self.dangling_cnames}
         unique_ai_verdicts = {v.evidence_id: v for v in self.ai_verdicts}
         unique_hypotheses = {h.id: h for h in self.hypotheses}
 
@@ -290,6 +305,7 @@ class ScanResult(BaseModel):
                     unique_graphql_operations.values(),
                     key=lambda g: (g.operation_type, g.operation_name, g.source_url),
                 ),
+                "dangling_cnames": sorted(unique_dangling_cnames.values(), key=lambda d: d.domain),
                 "ai_verdicts": sorted(unique_ai_verdicts.values(), key=lambda v: v.evidence_id),
                 "ai_injection_flags": sorted(set(self.ai_injection_flags)),
                 "hypotheses": sorted(unique_hypotheses.values(), key=lambda h: h.id),

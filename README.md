@@ -10,7 +10,7 @@
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="LLM-powered" src="https://img.shields.io/badge/AI%2FLLM-Claude%20%7C%20Ollama%20%7C%20OpenRouter-purple">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-438%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-448%20passing-brightgreen">
 </p>
 
 BundleBleed collects a target's client-side JavaScript and server-rendered
@@ -162,6 +162,19 @@ full list of guarantees this holds to.
 - For IDOR hypotheses with a concrete numeric id, drafts exactly one test
   variant as `.http`/`curl` artifacts — a cookie, if any, is always a
   placeholder, never a real value
+- Every hardcoded-credential hypothesis drafts the exact KeyHacks-style
+  liveness command for its type (`curl .../v1/models -H "Authorization:
+  Bearer <KEY>"` and similar, for ~25 common secret types) — this tool
+  never holds or sends the raw credential itself (it's never stored, per
+  the redaction guarantee below); you paste in the value from your own
+  capture and run it yourself
+- `--check-subdomain-takeover` resolves each discovered subdomain's CNAME
+  and flags a takeover *candidate* when it points at a service with a
+  documented history of unclaimed-record takeover (GitHub Pages, Heroku,
+  S3, ...) — DNS resolution only, gated behind the same 3-gate
+  authorization as `--active`; this tool never sends an HTTP request to
+  the CNAME target itself, since that host is outside the declared scope
+  by definition — claimability is always left for you to verify by hand
 - **This tool never sends the drafted request itself.** A human runs it and
   records the outcome — the only way a hypothesis's status ever changes
 
@@ -331,6 +344,7 @@ uv run bundlebleed scan [OPTIONS]
 | `--runtime-capture` | Render pages in headless Chromium and record every real request made; with `--session`/`--cookie-file`, also re-renders each page authenticated so auth-gated client-side routing (and the JS chunk behind it) actually loads; same 3-gate authorization as `--active`; needs `uv sync --extra runtime` |
 | `--runtime-max-pages` | Cap how many pages get rendered (default `10`) |
 | `--runtime-timeout` | Per-page hard timeout in seconds (default `15.0`) |
+| `--check-subdomain-takeover` | Resolve each discovered subdomain's CNAME and flag a takeover candidate if it points at a known-dangling-prone service (GitHub Pages, Heroku, S3, ...); DNS-only, never contacts the CNAME target; same 3-gate authorization as `--active` |
 
 See [Quick start](#quick-start) above for worked single/multi-domain/config
 examples, and [AI-Powered Analysis](#ai-powered-analysis) for `--ai` examples

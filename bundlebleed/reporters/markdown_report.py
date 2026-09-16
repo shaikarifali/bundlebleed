@@ -214,6 +214,16 @@ def render_markdown(result: ScanResult) -> str:
         for op in r.graphql_operations:
             lines.append(f"| {op.operation_type} | {op.operation_name} | {op.source_url} |")
 
+    lines += ["", "## Subdomain takeover candidates", ""]
+
+    if not r.dangling_cnames:
+        lines.append("_None found._")
+    else:
+        lines.append("| Domain | CNAME target | Service |")
+        lines.append("|---|---|---|")
+        for cname in r.dangling_cnames:
+            lines.append(f"| {cname.domain} | {cname.cname_target} | {cname.service_hint} |")
+
     lines += ["", "## Files analyzed", ""]
 
     if not r.files:

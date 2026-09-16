@@ -349,6 +349,12 @@ mount("graphql-operations-table", DATA.graphql_operations, [
   { key: "source_url", label: "Source" },
 ], "No GraphQL operations found.");
 
+mount("dangling-cnames-table", DATA.dangling_cnames, [
+  { key: "domain", label: "Domain" },
+  { key: "cname_target", label: "CNAME target" },
+  { key: "service_hint", label: "Service" },
+], "No subdomain takeover candidates found.");
+
 mount("files-table", DATA.files, [
   { key: "url", label: "URL" },
   { key: "frameworks", label: "Frameworks", get: (r) => r.frameworks.join(", ") },
@@ -399,6 +405,7 @@ def render_html(result: ScanResult) -> str:
         ("Mass assignment findings", len(r.mass_assignment_findings)),
         ("Vulnerable libraries", len(r.vulnerable_libraries)),
         ("GraphQL operations", len(r.graphql_operations)),
+        ("Subdomain takeover candidates", len(r.dangling_cnames)),
         ("Hypotheses", len(r.hypotheses)),
     ]
     tiles_html = "".join(
@@ -456,6 +463,9 @@ def render_html(result: ScanResult) -> str:
 
 <h2>GraphQL operations</h2>
 <div id="graphql-operations-table"></div>
+
+<h2>Subdomain takeover candidates</h2>
+<div id="dangling-cnames-table"></div>
 
 <h2>Files analyzed</h2>
 <div id="files-table"></div>

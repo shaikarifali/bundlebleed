@@ -7,6 +7,7 @@ from bundlebleed.identity import endpoint_id
 from bundlebleed.models import (
     AIEndpointVerdict,
     CorsMisconfiguration,
+    DanglingCnameFinding,
     DomFinding,
     Endpoint,
     GraphQLOperation,
@@ -366,6 +367,23 @@ def test_generic_credential_secret_falls_back_to_hardcoded_credential_exposure()
     )
     hypotheses = generate_hypotheses(_result(secrets=[secret]))
     assert hypotheses[0].bug_classes == ["Hardcoded Credential Exposure"]
+    # openai_api_key has a concrete KeyHacks command drafted for the human
+    # to run themselves -- this tool never sends it.
+    assert "api.openai.com/v1/models" in hypotheses[0].proposed_test
+    assert "this tool never validates a credential itself" in hypotheses[0].proposed_test.lower()
+
+
+def test_secret_type_with_no_known_keyhacks_command_gets_generic_guidance() -> None:
+    secret = Secret(
+        secret_type="hardcoded_password",
+        severity="medium",
+        redacted_value="pass****word",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["Hardcoded Credential Exposure"]
+    assert "KeyHacks method for its type" in hypotheses[0].proposed_test
 
 
 def test_out_of_scope_subdomain_generates_hypothesis_in_scope_does_not() -> None:
@@ -490,6 +508,19 @@ def test_graphql_query_does_not_generate_a_hypothesis() -> None:
     )
     hypotheses = generate_hypotheses(_result(graphql_operations=[op]))
     assert hypotheses == []
+
+
+def test_dangling_cname_generates_high_risk_takeover_candidate() -> None:
+    cname = DanglingCnameFinding(
+        domain="blog.e.com",
+        cname_target="some-unclaimed-app.herokuapp.com",
+        service_hint="herokuapp.com",
+    )
+    hypotheses = generate_hypotheses(_result(dangling_cnames=[cname]))
+    assert len(hypotheses) == 1
+    assert hypotheses[0].bug_classes == ["Subdomain Takeover Candidate"]
+    assert hypotheses[0].risk == "high"
+    assert "never contacted the CNAME target" in hypotheses[0].evidence_chain[1]
 
 
 def test_hypothesis_ids_are_stable_and_unique_across_target_kinds() -> None:

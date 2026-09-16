@@ -61,6 +61,7 @@ from bundlebleed.knowledge.graph import build_graph, graph_stats
 from bundlebleed.knowledge.schema import endpoint_schema_discrepancy
 from bundlebleed.logging import configure_logging
 from bundlebleed.models import (
+    DanglingCnameFinding,
     Endpoint,
     FetchedFile,
     FileAnalysis,
@@ -84,6 +85,7 @@ from bundlebleed.scope.validator import is_in_scope
 from bundlebleed.verification.artifacts import write_verification_artifacts
 from bundlebleed.verification.differential import ResponseCapture, compare_responses
 from bundlebleed.verification.drafter import draft_verification
+from bundlebleed.verification.subdomain_takeover import check_dangling_cnames
 
 # -h alongside --help everywhere -- every other recon tool a bug hunter
 # already has muscle memory for (nmap, ffuf, katana, nuclei, httpx) supports
@@ -516,6 +518,19 @@ def scan(
     runtime_timeout: Annotated[
         float, typer.Option("--runtime-timeout", help="Per-page hard timeout, in seconds")
     ] = 15.0,
+    check_subdomain_takeover: Annotated[
+        bool,
+        typer.Option(
+            "--check-subdomain-takeover",
+            help="For every discovered subdomain, resolve its CNAME and flag it as a "
+            "takeover candidate if the target belongs to a service with a documented "
+            "history of unclaimed-record takeover (GitHub Pages, Heroku, S3, ...). "
+            "DNS resolution only -- this never sends an HTTP request to the CNAME "
+            "target, since that host is outside the declared scope by definition; "
+            "claimability is left for you to verify by hand. Requires the same "
+            "3-gate active-scan authorization as --active.",
+        ),
+    ] = False,
 ) -> None:
     """Passive-by-default scan: collect JS-referencing URLs, filter through
     ScopeGuard, download+beautify+analyze JS bodies, extract candidate
@@ -776,6 +791,17 @@ def scan(
                 if tag_session:
                     auth_only_js_urls.append(fetched.url)
 
+    dangling_cnames: list[DanglingCnameFinding] = []
+    if check_subdomain_takeover:
+        if not active_scan_authorized(app_config, scope_config, active):
+            typer.echo(
+                "note: --check-subdomain-takeover given but not authorized (needs "
+                "--active + active_scan_enabled + scope.yaml attestation); skipping"
+            )
+        else:
+            unique_domains = sorted({s.domain for s in subdomains})
+            dangling_cnames = check_dangling_cnames(unique_domains)
+
     endpoints = url_endpoints + body_endpoints
 
     result = ScanResult(
@@ -797,6 +823,7 @@ def scan(
         mass_assignment_findings=mass_assignment_findings,
         vulnerable_libraries=vulnerable_libraries,
         graphql_operations=graphql_operations,
+        dangling_cnames=dangling_cnames,
         endpoint_schema_discrepancy=endpoint_schema_discrepancy(url_endpoints, body_endpoints),
         auth_only_js_urls=auth_only_js_urls,
         runtime_confirmed_paths=runtime_confirmed_paths,

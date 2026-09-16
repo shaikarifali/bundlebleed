@@ -50,6 +50,102 @@ _SENSITIVE_MUTATION_NAME_RE = re.compile(
     r"transfer|refund|credit|disable|enable|verify|ban|suspend|reset|password"
 )
 
+# Concrete KeyHacks-style liveness checks, one per secret type this tool can
+# confidently give an exact command for. This tool never runs these itself
+# and never stores the raw credential (Invariant 7) -- these are drafted so
+# a human can paste in the value from their own capture (Burp, browser
+# devtools, ...) and run it themselves, exactly like the IDOR verification
+# drafts. A read-only "who am I" / "list my account" endpoint was chosen for
+# every entry here specifically to avoid any state-changing side effect.
+_KEYHACKS_COMMANDS: dict[str, str] = {
+    "aws_access_key": (
+        "aws configure set aws_access_key_id <ACCESS_KEY_ID> --profile bb-check && "
+        "aws configure set aws_secret_access_key <SECRET_KEY> --profile bb-check && "
+        "aws sts get-caller-identity --profile bb-check"
+    ),
+    "aws_secret_key": (
+        "aws configure set aws_access_key_id <ACCESS_KEY_ID> --profile bb-check && "
+        "aws configure set aws_secret_access_key <SECRET_KEY> --profile bb-check && "
+        "aws sts get-caller-identity --profile bb-check"
+    ),
+    "google_api_key": (
+        'curl "https://maps.googleapis.com/maps/api/geocode/json?address=test&key=<KEY>" '
+        "-- a valid key returns real geocode results, not REQUEST_DENIED"
+    ),
+    "stripe_live_key": "curl https://api.stripe.com/v1/charges -u <KEY>:",
+    "stripe_test_key": "curl https://api.stripe.com/v1/charges -u <KEY>:",
+    "github_token": 'curl -H "Authorization: token <TOKEN>" https://api.github.com/user',
+    "github_fine_grained_pat": (
+        'curl -H "Authorization: token <TOKEN>" https://api.github.com/user'
+    ),
+    "slack_token": 'curl -H "Authorization: Bearer <TOKEN>" https://slack.com/api/auth.test',
+    "twilio_account_sid": (
+        "curl -u <ACCOUNT_SID>:<AUTH_TOKEN> "
+        "https://api.twilio.com/2010-04-01/Accounts/<ACCOUNT_SID>.json"
+    ),
+    "twilio_api_key_sid": (
+        "curl -u <ACCOUNT_SID>:<AUTH_TOKEN> "
+        "https://api.twilio.com/2010-04-01/Accounts/<ACCOUNT_SID>.json"
+    ),
+    "sendgrid_api_key": (
+        'curl -H "Authorization: Bearer <KEY>" https://api.sendgrid.com/v3/scopes'
+    ),
+    "mailgun_api_key": 'curl -s --user "api:<KEY>" https://api.mailgun.net/v3/domains',
+    "npm_token": (
+        'curl -H "Authorization: Bearer <TOKEN>" https://registry.npmjs.org/-/npm/v1/user'
+    ),
+    "discord_bot_token": (
+        'curl -H "Authorization: Bot <TOKEN>" https://discord.com/api/v10/users/@me'
+    ),
+    "square_access_token": (
+        'curl -H "Authorization: Bearer <TOKEN>" https://connect.squareup.com/v2/locations'
+    ),
+    "azure_storage_account_key": (
+        "az storage container list --account-name <ACCOUNT_NAME> --account-key <KEY>"
+    ),
+    "openai_api_key": 'curl https://api.openai.com/v1/models -H "Authorization: Bearer <KEY>"',
+    "anthropic_api_key": (
+        'curl https://api.anthropic.com/v1/models -H "x-api-key: <KEY>" '
+        '-H "anthropic-version: 2023-06-01"'
+    ),
+    "anthropic_admin_api_key": (
+        'curl https://api.anthropic.com/v1/organizations/users -H "x-api-key: <KEY>" '
+        '-H "anthropic-version: 2023-06-01"'
+    ),
+    "huggingface_token": (
+        'curl -H "Authorization: Bearer <TOKEN>" https://huggingface.co/api/whoami-v2'
+    ),
+    "cloudflare_api_token": (
+        'curl -H "Authorization: Bearer <TOKEN>" '
+        "https://api.cloudflare.com/client/v4/user/tokens/verify"
+    ),
+    "digitalocean_pat": (
+        'curl -H "Authorization: Bearer <TOKEN>" https://api.digitalocean.com/v2/account'
+    ),
+    "gitlab_pat": 'curl --header "PRIVATE-TOKEN: <TOKEN>" https://gitlab.com/api/v4/user',
+    "postman_api_key": 'curl -H "X-Api-Key: <KEY>" https://api.getpostman.com/me',
+    "notion_api_token": (
+        'curl -H "Authorization: Bearer <TOKEN>" -H "Notion-Version: 2022-06-28" '
+        "https://api.notion.com/v1/users/me"
+    ),
+    "sentry_org_auth_token": (
+        'curl -H "Authorization: Bearer <TOKEN>" https://sentry.io/api/0/organizations/'
+    ),
+    "supabase_management_pat": (
+        'curl -H "Authorization: Bearer <TOKEN>" https://api.supabase.com/v1/projects'
+    ),
+    "heroku_api_key_v2": (
+        'curl -H "Authorization: Bearer <TOKEN>" '
+        '-H "Accept: application/vnd.heroku+json; version=3" '
+        "https://api.heroku.com/account"
+    ),
+    "posthog_personal_api_key": (
+        'curl -H "Authorization: Bearer <TOKEN>" https://app.posthog.com/api/users/@me/'
+    ),
+    "cohere_api_token": ('curl https://api.cohere.ai/v1/models -H "Authorization: Bearer <TOKEN>"'),
+    "clerk_secret_key": 'curl -H "Authorization: Bearer <KEY>" https://api.clerk.com/v1/users',
+}
+
 
 def _has_numeric_id_query_param(value: str) -> bool:
     """True for a query string like '?productId=1' or '?user_id=5' — a
@@ -309,10 +405,23 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
             )
         else:
             bug_classes = ["Hardcoded Credential Exposure"]
-            proposed_test = (
-                "Verify whether this credential is live using the KeyHacks method for "
-                "its type; if live, determine scope of access before reporting."
-            )
+            keyhacks_command = _KEYHACKS_COMMANDS.get(secret.secret_type)
+            if keyhacks_command is not None:
+                proposed_test = (
+                    "This tool never validates a credential itself. Using the full value "
+                    "from your own capture (this tool never stores it), run:\n"
+                    f"  {keyhacks_command}\n"
+                    "A successful, non-error response means the credential is live; "
+                    "determine scope of access before reporting. Only run this against a "
+                    "credential you're authorized to test as part of your engagement."
+                )
+            else:
+                proposed_test = (
+                    "Verify whether this credential is live using the KeyHacks method for "
+                    "its type; if live, determine scope of access before reporting. Only "
+                    "run this against a credential you're authorized to test as part of "
+                    "your engagement."
+                )
         hypotheses.append(
             Hypothesis(
                 id=hid,
@@ -575,6 +684,34 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
                     "session and, separately, with no authentication at all. Do not "
                     "execute a state-changing call against real data without an "
                     "explicitly authorized, controlled account."
+                ),
+            )
+        )
+
+    for cname in result.dangling_cnames:
+        hid = stable_id("dangling_cname", cname.domain)
+        hypotheses.append(
+            Hypothesis(
+                id=hid,
+                target_kind="dangling_cname",
+                target_value=cname.domain,
+                source_url=cname.domain,
+                bug_classes=["Subdomain Takeover Candidate"],
+                evidence_chain=[
+                    f"{cname.domain} has a CNAME pointing to {cname.cname_target}, a "
+                    f"'{cname.service_hint}' service with a documented history of "
+                    "unclaimed-record takeover",
+                    "DNS resolution only -- this tool never contacted the CNAME target",
+                ],
+                confidence=0.3,
+                risk="high",
+                proposed_test=(
+                    f"Check whether {cname.cname_target} is actually unclaimed: use the "
+                    f"provider's own UI/CLI for '{cname.service_hint}' to check name "
+                    "availability, or fetch the URL yourself and look for that service's "
+                    "known 'no such app'/'bucket does not exist' page. Never attempt to "
+                    "claim the resource without explicit authorization from the program "
+                    "AND, in most cases, the service provider's own terms."
                 ),
             )
         )
