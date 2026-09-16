@@ -10,7 +10,7 @@
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="LLM-powered" src="https://img.shields.io/badge/AI%2FLLM-Claude%20%7C%20Ollama%20%7C%20OpenRouter-purple">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-362%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-407%20passing-brightgreen">
 </p>
 
 BundleBleed collects a target's client-side JavaScript and server-rendered
@@ -91,16 +91,30 @@ full list of guarantees this holds to.
   and config-object shorthand, raw `XMLHttpRequest.open()`,
   `navigator.sendBeacon()`, GraphQL, WebSocket — plus plain server-rendered
   `<a href>` links and `<form action>` targets that JS-only patterns miss
-- 31 secret patterns (AWS/GCP/Azure keys, Stripe, Slack, Twilio, SendGrid,
-  Discord, Square, Shopify, PayPal/Braintree, private key blocks, JWTs,
-  generic Bearer tokens, ...) — always redacted (type + preview + partial
-  hash only, never plaintext)
+- 57 secret patterns: cloud provider keys (AWS/GCP/Azure/Cloudflare/
+  DigitalOcean), payment/messaging tokens (Stripe, Slack, Twilio, SendGrid,
+  Discord, Square, Shopify, PayPal/Braintree), AI/LLM provider keys
+  (OpenAI, Anthropic, Cohere, Hugging Face), modern SaaS platforms
+  (Supabase, Clerk, PlanetScale, PostHog, Sentry, Notion, Algolia,
+  GitLab/GitHub fine-grained PATs), private key blocks, JWTs, generic
+  Bearer tokens — always redacted (type + preview + partial hash only,
+  never plaintext); new patterns curated from TruffleHog's and Gitleaks'
+  public detector rulesets, tuned against their documented false-positive
+  cases (e.g. never flagging PostHog's or Algolia's intentionally-public
+  keys)
 - Higher-severity shapes chosen from real disclosed HackerOne/Bugcrowd
-  reports: SSRF-shaped parameters, prototype-pollution-prone deep-merge
-  calls, JWT `alg:none` (every JWT's header is decoded to check),
-  CORS misconfiguration (`Allow-Origin: *` + `Allow-Credentials: true`),
-  open/misconfigured Firebase-style databases, third-party script/supply-
-  chain surface
+  reports and named bug hunters' published methodologies: SSRF-shaped
+  parameters, prototype-pollution-prone deep-merge calls, JWT `alg:none`
+  (every JWT's header is decoded to check), CORS misconfiguration
+  (`Allow-Origin: *` + `Allow-Credentials: true`), open/misconfigured
+  Firebase-style databases, third-party script/supply-chain surface,
+  GraphQL introspection left enabled, dangling cloud-storage-bucket
+  references (subdomain/bucket-takeover candidates), hardcoded cloud
+  metadata-endpoint references (SSRF targets), exposed Swagger/OpenAPI
+  spec paths, exposed `.git`/`.env`/`.svn` path references, internal/
+  staging hostname disclosure, `postMessage` listeners with no origin
+  check, and WebSocket connections with no visible auth (Cross-Site
+  WebSocket Hijacking candidates)
 - In-domain subdomains, security-interesting parameters (from both JS
   declarations and URL query strings), DOM-XSS sink/source co-occurrence
 - Source maps are followed and, when a map embeds `sourcesContent`, the

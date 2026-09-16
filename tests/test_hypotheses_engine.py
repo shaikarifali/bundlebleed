@@ -9,11 +9,13 @@ from bundlebleed.models import (
     CorsMisconfiguration,
     DomFinding,
     Endpoint,
+    PostMessageFinding,
     ScanResult,
     SchemaDiscrepancy,
     Secret,
     SubdomainFinding,
     ThirdPartyScript,
+    WebSocketFinding,
 )
 
 
@@ -251,6 +253,94 @@ def test_firebase_config_secret_generates_misconfigured_database_hypothesis() ->
     assert "/.json" in hypotheses[0].proposed_test
 
 
+def test_graphql_introspection_reference_generates_expected_hypothesis() -> None:
+    secret = Secret(
+        secret_type="graphql_introspection_reference",
+        severity="medium",
+        redacted_value="Intr****uery",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["GraphQL Introspection Exposure"]
+    assert "__schema" in hypotheses[0].proposed_test
+
+
+def test_cloud_storage_reference_generates_takeover_candidate_hypothesis() -> None:
+    secret = Secret(
+        secret_type="cloud_storage_reference",
+        severity="medium",
+        redacted_value="myap****.com",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["Possible Subdomain/Bucket Takeover Candidate"]
+
+
+def test_cloud_metadata_reference_generates_ssrf_target_hypothesis() -> None:
+    secret = Secret(
+        secret_type="cloud_metadata_reference",
+        severity="critical",
+        redacted_value="169.****.254",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["Cloud Metadata Endpoint Reference (possible SSRF target)"]
+    assert hypotheses[0].risk == "critical"
+
+
+def test_exposed_api_docs_path_generates_expected_hypothesis() -> None:
+    secret = Secret(
+        secret_type="exposed_api_docs_path",
+        severity="medium",
+        redacted_value="/swa****son",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["Exposed API Documentation"]
+
+
+def test_exposed_vcs_config_path_generates_expected_hypothesis() -> None:
+    secret = Secret(
+        secret_type="exposed_vcs_config_path",
+        severity="high",
+        redacted_value="/.gi****nfig",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["Exposed VCS/Config Path Reference"]
+    assert hypotheses[0].risk == "high"
+
+
+def test_internal_hostname_reference_generates_disclosure_hypothesis() -> None:
+    secret = Secret(
+        secret_type="internal_hostname_reference",
+        severity="low",
+        redacted_value="stag****.com",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["Internal Hostname Disclosure"]
+    assert hypotheses[0].risk == "low"
+
+
+def test_generic_credential_secret_falls_back_to_hardcoded_credential_exposure() -> None:
+    secret = Secret(
+        secret_type="openai_api_key",
+        severity="critical",
+        redacted_value="sk-a****dEfg",
+        partial_hash="abc123",
+        source_url="https://e.com/app.js",
+    )
+    hypotheses = generate_hypotheses(_result(secrets=[secret]))
+    assert hypotheses[0].bug_classes == ["Hardcoded Credential Exposure"]
+
+
 def test_out_of_scope_subdomain_generates_hypothesis_in_scope_does_not() -> None:
     out_of_scope = SubdomainFinding(
         domain="internal-api.example.com",
@@ -291,6 +381,26 @@ def test_third_party_script_always_generates_low_risk_hypothesis() -> None:
     assert len(hypotheses) == 1
     assert hypotheses[0].bug_classes == ["Client-Side Supply Chain Surface"]
     assert hypotheses[0].risk == "low"
+
+
+def test_postmessage_finding_generates_high_risk_hypothesis() -> None:
+    pm = PostMessageFinding(
+        source_url="https://e.com/app.js", snippet_preview="addEventListener('message'"
+    )
+    hypotheses = generate_hypotheses(_result(postmessage_findings=[pm]))
+    assert len(hypotheses) == 1
+    assert hypotheses[0].bug_classes == ["PostMessage Missing Origin Check"]
+    assert hypotheses[0].risk == "high"
+
+
+def test_websocket_finding_generates_medium_risk_hypothesis() -> None:
+    ws = WebSocketFinding(
+        source_url="https://e.com/app.js", snippet_preview="new WebSocket('wss://e.com/socket')"
+    )
+    hypotheses = generate_hypotheses(_result(websocket_findings=[ws]))
+    assert len(hypotheses) == 1
+    assert hypotheses[0].bug_classes == ["Cross-Site WebSocket Hijacking Candidate"]
+    assert hypotheses[0].risk == "medium"
 
 
 def test_hypothesis_ids_are_stable_and_unique_across_target_kinds() -> None:

@@ -318,6 +318,16 @@ mount("third-party-scripts-table", DATA.third_party_scripts, [
   { key: "page_url", label: "Page" },
 ], "No third-party scripts found.");
 
+mount("postmessage-table", DATA.postmessage_findings, [
+  { key: "source_url", label: "Source" },
+  { key: "snippet_preview", label: "Snippet", code: true },
+], "No postMessage findings.");
+
+mount("websocket-table", DATA.websocket_findings, [
+  { key: "source_url", label: "Source" },
+  { key: "snippet_preview", label: "Snippet", code: true },
+], "No WebSocket findings.");
+
 mount("files-table", DATA.files, [
   { key: "url", label: "URL" },
   { key: "frameworks", label: "Frameworks", get: (r) => r.frameworks.join(", ") },
@@ -363,6 +373,8 @@ def render_html(result: ScanResult) -> str:
         ("Subdomains", len(r.subdomains)),
         ("CORS misconfigurations", len(r.cors_findings)),
         ("Third-party scripts", len(r.third_party_scripts)),
+        ("PostMessage findings", len(r.postmessage_findings)),
+        ("WebSocket findings", len(r.websocket_findings)),
         ("Hypotheses", len(r.hypotheses)),
     ]
     tiles_html = "".join(
@@ -405,6 +417,12 @@ def render_html(result: ScanResult) -> str:
 
 <h2>Third-party scripts</h2>
 <div id="third-party-scripts-table"></div>
+
+<h2>PostMessage findings</h2>
+<div id="postmessage-table"></div>
+
+<h2>WebSocket findings</h2>
+<div id="websocket-table"></div>
 
 <h2>Files analyzed</h2>
 <div id="files-table"></div>

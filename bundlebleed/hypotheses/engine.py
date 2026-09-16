@@ -244,6 +244,51 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
                 "https://<this-database>/.json (no auth header) and confirm whether the "
                 "response is data or a permission-denied error — never attempt a write."
             )
+        elif secret.secret_type == "graphql_introspection_reference":
+            bug_classes = ["GraphQL Introspection Exposure"]
+            proposed_test = (
+                "Send a single, minimal introspection query (e.g. { __schema { queryType "
+                "{ name } } }) to the GraphQL endpoint and confirm whether it responds with "
+                "schema data instead of a disabled-introspection error — read-only, no "
+                "mutation."
+            )
+        elif secret.secret_type == "cloud_storage_reference":
+            bug_classes = ["Possible Subdomain/Bucket Takeover Candidate"]
+            proposed_test = (
+                "Passively resolve the bucket/hostname (DNS lookup, or a plain GET to the "
+                "bucket's own listing/website endpoint) to confirm whether it still exists "
+                "and is still owned by this target — never claim or write to it."
+            )
+        elif secret.secret_type == "cloud_metadata_reference":
+            bug_classes = ["Cloud Metadata Endpoint Reference (possible SSRF target)"]
+            proposed_test = (
+                "This string only makes sense if some server-side route proxies a request "
+                "to it — identify which endpoint embeds this value and treat it as a "
+                "high-value SSRF target; do not query the metadata service directly "
+                "yourself outside an authorized, scoped test of that endpoint."
+            )
+        elif secret.secret_type == "exposed_api_docs_path":
+            bug_classes = ["Exposed API Documentation"]
+            proposed_test = (
+                "Issue a single read-only GET to this path and confirm whether it serves "
+                "a live API spec — an accurate spec often reveals undocumented endpoints "
+                "or parameters faster than blind recon."
+            )
+        elif secret.secret_type == "exposed_vcs_config_path":
+            bug_classes = ["Exposed VCS/Config Path Reference"]
+            proposed_test = (
+                "Issue a single read-only GET to this path and confirm whether it serves "
+                "real repository/config content rather than a 404 — a live .git/.env "
+                "exposure can mean full source/credential disclosure."
+            )
+        elif secret.secret_type == "internal_hostname_reference":
+            bug_classes = ["Internal Hostname Disclosure"]
+            proposed_test = (
+                "This is an information-disclosure lead, not a vulnerability by itself: "
+                "confirm the hostname is genuinely non-public (not just a normal "
+                "marketing subdomain) before treating it as in-scope internal "
+                "infrastructure disclosure."
+            )
         else:
             bug_classes = ["Hardcoded Credential Exposure"]
             proposed_test = (
@@ -372,6 +417,54 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
                     "Pure discovery, not a claim of compromise: note this third-party "
                     "dependency for a supply-chain review (e.g. is the host still owned by "
                     "the expected party, does it use Subresource Integrity)."
+                ),
+            )
+        )
+
+    for pm in result.postmessage_findings:
+        hid = stable_id("postmessage", pm.source_url)
+        hypotheses.append(
+            Hypothesis(
+                id=hid,
+                target_kind="postmessage",
+                target_value=pm.snippet_preview,
+                source_url=pm.source_url,
+                bug_classes=["PostMessage Missing Origin Check"],
+                evidence_chain=[
+                    f"A 'message' event listener is registered in {pm.source_url} with no "
+                    "'.origin' check found anywhere else in the same file",
+                    "Whole-file co-occurrence only — no data-flow tracing performed yet",
+                ],
+                confidence=0.3,
+                risk="high",
+                proposed_test=(
+                    "From an attacker-controlled page, postMessage a benign, non-destructive "
+                    "probe payload to this page and confirm whether the handler acts on it "
+                    "regardless of sender origin."
+                ),
+            )
+        )
+
+    for ws in result.websocket_findings:
+        hid = stable_id("websocket", ws.source_url, ws.snippet_preview)
+        hypotheses.append(
+            Hypothesis(
+                id=hid,
+                target_kind="websocket",
+                target_value=ws.snippet_preview,
+                source_url=ws.source_url,
+                bug_classes=["Cross-Site WebSocket Hijacking Candidate"],
+                evidence_chain=[
+                    f"A WebSocket connection in {ws.source_url} has no visible token/auth "
+                    "hint nearby — may rely on ambient cookie auth alone",
+                ],
+                confidence=0.25,
+                risk="medium",
+                proposed_test=(
+                    "From a page on a different origin, attempt to open this WebSocket "
+                    "connection relying only on the browser's ambient session cookie and "
+                    "confirm whether the server accepts it without checking the Origin "
+                    "header."
                 ),
             )
         )

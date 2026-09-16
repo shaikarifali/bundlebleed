@@ -89,6 +89,26 @@ class ThirdPartyScript(BaseModel):
     page_url: str
 
 
+class PostMessageFinding(BaseModel):
+    """A `message` event listener registered with no `.origin` check found
+    anywhere else in the same file — a whole-file co-occurrence heuristic
+    (like the DOM sink/source engine), not a proven data flow. A listener
+    that trusts `event.data` regardless of sender is a classic DOM-XSS /
+    account-takeover source."""
+
+    source_url: str
+    snippet_preview: str
+
+
+class WebSocketFinding(BaseModel):
+    """A `new WebSocket(...)` call with no visible token/auth hint nearby —
+    a candidate for Cross-Site WebSocket Hijacking if the server relies on
+    ambient cookie auth alone with no Origin check."""
+
+    source_url: str
+    snippet_preview: str
+
+
 class GraphStats(BaseModel):
     node_count: int
     edge_count: int
@@ -127,6 +147,8 @@ class ScanResult(BaseModel):
     dom_findings: list[DomFinding] = Field(default_factory=list)
     cors_findings: list[CorsMisconfiguration] = Field(default_factory=list)
     third_party_scripts: list[ThirdPartyScript] = Field(default_factory=list)
+    postmessage_findings: list[PostMessageFinding] = Field(default_factory=list)
+    websocket_findings: list[WebSocketFinding] = Field(default_factory=list)
     graph_stats: GraphStats | None = None
     endpoint_schema_discrepancy: SchemaDiscrepancy | None = None
     ai_verdicts: list[AIEndpointVerdict] = Field(default_factory=list)
@@ -161,6 +183,10 @@ class ScanResult(BaseModel):
         unique_third_party_scripts = {
             (t.hostname, t.script_url): t for t in self.third_party_scripts
         }
+        unique_postmessage_findings = {p.source_url: p for p in self.postmessage_findings}
+        unique_websocket_findings = {
+            (w.source_url, w.snippet_preview): w for w in self.websocket_findings
+        }
         unique_ai_verdicts = {v.evidence_id: v for v in self.ai_verdicts}
         unique_hypotheses = {h.id: h for h in self.hypotheses}
 
@@ -189,6 +215,13 @@ class ScanResult(BaseModel):
                 "cors_findings": sorted(unique_cors_findings.values(), key=lambda c: c.source_url),
                 "third_party_scripts": sorted(
                     unique_third_party_scripts.values(), key=lambda t: (t.hostname, t.script_url)
+                ),
+                "postmessage_findings": sorted(
+                    unique_postmessage_findings.values(), key=lambda p: p.source_url
+                ),
+                "websocket_findings": sorted(
+                    unique_websocket_findings.values(),
+                    key=lambda w: (w.source_url, w.snippet_preview),
                 ),
                 "ai_verdicts": sorted(unique_ai_verdicts.values(), key=lambda v: v.evidence_id),
                 "ai_injection_flags": sorted(set(self.ai_injection_flags)),

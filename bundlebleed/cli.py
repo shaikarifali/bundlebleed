@@ -41,6 +41,10 @@ from bundlebleed.extractors.cors import extract_cors_misconfiguration
 from bundlebleed.extractors.dom_analysis import extract_dom_findings
 from bundlebleed.extractors.endpoints import extract_endpoints
 from bundlebleed.extractors.html_links import extract_html_endpoints, extract_third_party_scripts
+from bundlebleed.extractors.messaging import (
+    extract_postmessage_findings,
+    extract_websocket_findings,
+)
 from bundlebleed.extractors.parameters import extract_parameters
 from bundlebleed.extractors.secrets import extract_secrets
 from bundlebleed.extractors.subdomains import extract_subdomains
@@ -597,6 +601,8 @@ def scan(
     dom_findings = []
     cors_findings = []
     third_party_scripts = []
+    postmessage_findings = []
+    websocket_findings = []
     for fetched in fetched_files:
         beautified = beautify(fetched.content)
 
@@ -605,6 +611,8 @@ def scan(
         subdomains.extend(extract_subdomains(beautified, fetched.url, scope_config))
         parameters.extend(extract_parameters(beautified, source_url=fetched.url))
         dom_findings.extend(extract_dom_findings(beautified, source_url=fetched.url))
+        postmessage_findings.extend(extract_postmessage_findings(beautified, fetched.url))
+        websocket_findings.extend(extract_websocket_findings(beautified, fetched.url))
         cors_finding = extract_cors_misconfiguration(fetched.headers, fetched.url)
         if cors_finding is not None:
             cors_findings.append(cors_finding)
@@ -627,6 +635,8 @@ def scan(
         parameters.extend(extract_parameters(page.content, source_url=page.url))
         dom_findings.extend(extract_dom_findings(page.content, source_url=page.url))
         third_party_scripts.extend(extract_third_party_scripts(page.content, page.url))
+        postmessage_findings.extend(extract_postmessage_findings(page.content, page.url))
+        websocket_findings.extend(extract_websocket_findings(page.content, page.url))
         page_cors_finding = extract_cors_misconfiguration(page.headers, page.url)
         if page_cors_finding is not None:
             cors_findings.append(page_cors_finding)
@@ -640,6 +650,8 @@ def scan(
         subdomains.extend(extract_subdomains(beautified, fetched.url, scope_config))
         parameters.extend(extract_parameters(beautified, source_url=fetched.url))
         dom_findings.extend(extract_dom_findings(beautified, source_url=fetched.url))
+        postmessage_findings.extend(extract_postmessage_findings(beautified, fetched.url))
+        websocket_findings.extend(extract_websocket_findings(beautified, fetched.url))
         auth_cors_finding = extract_cors_misconfiguration(fetched.headers, fetched.url)
         if auth_cors_finding is not None:
             cors_findings.append(auth_cors_finding)
@@ -693,6 +705,8 @@ def scan(
                 subdomains.extend(extract_subdomains(beautified, fetched.url, scope_config))
                 parameters.extend(extract_parameters(beautified, source_url=fetched.url))
                 dom_findings.extend(extract_dom_findings(beautified, source_url=fetched.url))
+                postmessage_findings.extend(extract_postmessage_findings(beautified, fetched.url))
+                websocket_findings.extend(extract_websocket_findings(beautified, fetched.url))
                 runtime_cors_finding = extract_cors_misconfiguration(fetched.headers, fetched.url)
                 if runtime_cors_finding is not None:
                     cors_findings.append(runtime_cors_finding)
@@ -729,6 +743,8 @@ def scan(
         dom_findings=dom_findings,
         cors_findings=cors_findings,
         third_party_scripts=third_party_scripts,
+        postmessage_findings=postmessage_findings,
+        websocket_findings=websocket_findings,
         endpoint_schema_discrepancy=endpoint_schema_discrepancy(url_endpoints, body_endpoints),
         auth_only_js_urls=auth_only_js_urls,
         runtime_confirmed_paths=runtime_confirmed_paths,

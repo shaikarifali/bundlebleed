@@ -41,6 +41,32 @@ SHOULD_MATCH_CASES = [
     ("pgp_private_key_block", "-----BEGIN PGP PRIVATE KEY BLOCK-----"),
     ("generic_bearer_token", "Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456"),
     ("generic_api_key_assignment", 'const apiKey = "sk_abcdef0123456789";'),
+    ("openai_api_key", "sk-" + "a" * 20 + "T3BlbkFJ" + "b" * 20),
+    ("anthropic_api_key", "sk-ant-api03-" + "a" * 93 + "AA"),
+    ("anthropic_admin_api_key", "sk-ant-admin01-" + "a" * 93 + "AA"),
+    ("huggingface_token", "hf_" + "a" * 34),
+    ("cohere_api_token", "cohere_token = " + "a" * 40),
+    ("supabase_management_pat", "sbp_" + "a1b2c3d4" * 5),
+    ("supabase_secret_key", "sb_secret_" + "a1b2c3d4" * 3),
+    ("clerk_secret_key", "sk_live_" + "a" * 45),
+    ("planetscale_token", "pscale_tkn_" + "a" * 32),
+    ("posthog_personal_api_key", "phx_" + "a" * 45),
+    ("cloudflare_global_api_key", "cloudflare_key: " + "f" * 37),
+    ("cloudflare_api_token", "cloudflare_token = " + "a" * 40),
+    ("digitalocean_pat", "dop_v1_" + "f" * 64),
+    ("sentry_org_auth_token", "sntrys_eyJ" + "a" * 197),
+    ("heroku_api_key_v2", "HRKU-AA" + "a" * 58),
+    ("gitlab_pat", "glpat-" + "a" * 20),
+    ("github_fine_grained_pat", "github_pat_" + "a" * 82),
+    ("postman_api_key", "PMAK-" + "f" * 24 + "-" + "f" * 34),
+    ("notion_api_token", "ntn_" + "1" * 11 + "a" * 35),
+    ("algolia_admin_api_key", "algoliaAdminApiKey: " + "a" * 32),
+    ("graphql_introspection_reference", "query IntrospectionQuery { __typename }"),
+    ("cloud_storage_reference", "const bucket = 'mybucket.s3.amazonaws.com';"),
+    ("cloud_metadata_reference", "fetch('http://169.254.169.254/latest/meta-data/')"),
+    ("exposed_api_docs_path", "fetch('/swagger.json')"),
+    ("exposed_vcs_config_path", "fetch('/.env')"),
+    ("internal_hostname_reference", "const base = 'staging.api.example.com';"),
 ]
 
 
@@ -66,3 +92,20 @@ def test_aws_secret_key_requires_context_keyword_not_just_length() -> None:
     )
     types = {s.secret_type for s in secrets}
     assert "aws_secret_key" not in types
+
+
+def test_posthog_project_key_is_not_flagged_as_personal_api_key() -> None:
+    # 'phc_' is PostHog's intentionally-public project key, shipped by
+    # design in every frontend snippet -- only 'phx_' (personal API key)
+    # is a real secret.
+    secrets = extract_secrets("posthog.init('phc_" + "a" * 45 + "')", source_url="x")
+    types = {s.secret_type for s in secrets}
+    assert "posthog_personal_api_key" not in types
+
+
+def test_algolia_search_key_without_admin_keyword_is_not_flagged() -> None:
+    # Algolia's public search-only key has the identical 32-char shape to
+    # the admin key -- only flag when "admin" appears near the keyword.
+    secrets = extract_secrets("algoliaSearchKey: " + "a" * 32, source_url="x")
+    types = {s.secret_type for s in secrets}
+    assert "algolia_admin_api_key" not in types

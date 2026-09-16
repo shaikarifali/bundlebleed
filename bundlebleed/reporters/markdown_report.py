@@ -161,6 +161,26 @@ def render_markdown(result: ScanResult) -> str:
         for t in r.third_party_scripts:
             lines.append(f"| {t.hostname} | {t.script_url} | {t.page_url} |")
 
+    lines += ["", "## PostMessage findings", ""]
+
+    if not r.postmessage_findings:
+        lines.append("_None found._")
+    else:
+        lines.append("| Source | Snippet |")
+        lines.append("|---|---|")
+        for pm in r.postmessage_findings:
+            lines.append(f"| {pm.source_url} | `{pm.snippet_preview}` |")
+
+    lines += ["", "## WebSocket findings", ""]
+
+    if not r.websocket_findings:
+        lines.append("_None found._")
+    else:
+        lines.append("| Source | Snippet |")
+        lines.append("|---|---|")
+        for w in r.websocket_findings:
+            lines.append(f"| {w.source_url} | `{w.snippet_preview}` |")
+
     lines += ["", "## Files analyzed", ""]
 
     if not r.files:
