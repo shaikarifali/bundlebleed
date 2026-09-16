@@ -111,9 +111,24 @@ def _print_banner() -> None:
         print(_BANNER_ART + tagline, file=sys.stderr)
 
 
+_TOP_LEVEL_EXAMPLES = """\
+Quick examples:
+
+  bundlebleed scan -t example.com -o results/
+  bundlebleed scan -t example.com,api.example.com -o results/
+  bundlebleed scan -tL examples/scope-multi-domain.txt -o results/
+  bundlebleed scan -t example.com --session "mysession:cookie_string_here" -o results/
+  bundlebleed scope check "https://example.com/api" -t example.com
+  bundlebleed verify record <hypothesis-id> --outcome confirmed -o results/
+  bundlebleed ai report <hypothesis-id> --model claude-opus-5 -o results/
+
+Run `bundlebleed scan -h` for the full list of scan examples and every flag.
+"""
+
 app = typer.Typer(
     help="BundleBleed — scope-gated JS recon for authorized bug bounty testing.",
     context_settings=_HELP_OPTION_NAMES,
+    epilog=_TOP_LEVEL_EXAMPLES,
 )
 scope_app = typer.Typer(
     help="Inspect and validate scope without running a scan.",
@@ -288,6 +303,19 @@ Examples:
 
   Fresh or JS-heavy target with no gau/waybackurls archive history:
     bundlebleed scan -t example.com --seed-url https://example.com/ -o results/
+
+  Authenticated scan (a pre-obtained session cookie -- no login is ever
+  performed by this tool). 'mysession' is just a label you choose:
+    bundlebleed scan -t example.com --session "mysession:cookie_string_here" -o results/
+
+  ...or from a cookie file (raw header, JSON, or Netscape cookies.txt export):
+    bundlebleed scan -t example.com --cookie-file cookies.txt -o results/
+
+  Authenticated + runtime capture together (also renders each page logged
+  in, so an admin-only client-side route -- and its JS chunk -- actually
+  loads; requires --active + active_scan_enabled + scope.yaml attestation):
+    bundlebleed scan --config scope.yaml -o results/ --active --runtime-capture \\
+      --cookie-file cookies.txt
 """
 
 

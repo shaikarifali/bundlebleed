@@ -226,6 +226,12 @@ uv run bundlebleed scan --config scope.yaml -o results/
 
 # Fresh/JS-heavy target with no gau/waybackurls archive history
 uv run bundlebleed scan -t example.com --seed-url https://example.com/ -o results/
+
+# Authenticated scan -- a pre-obtained session cookie (never a login this tool performs)
+uv run bundlebleed scan -t example.com --session "mysession:cookie_string_here" -o results/
+
+# ...or from a cookie file (raw header, JSON, or Netscape cookies.txt export)
+uv run bundlebleed scan -t example.com --cookie-file cookies.txt -o results/
 ```
 
 Every command and subcommand supports `-h`/`--help`
