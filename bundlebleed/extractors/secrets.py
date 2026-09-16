@@ -3,9 +3,20 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 
 from bundlebleed.extractors.patterns import load_secret_patterns
 from bundlebleed.models import Secret
+
+# A real leaked credential is never legitimately labeled this way in the
+# surrounding code -- "test"/"sandbox" are deliberately excluded since
+# they're how a real, lower-risk Stripe/sk_test_-style test key is
+# legitimately described, so filtering them out would suppress a pattern
+# whose entire purpose is catching exactly that.
+_FALSE_POSITIVE_CONTEXT_RE = re.compile(
+    r"(?i)\b(example|placeholder|dummy|sample|fake|redacted|changeme|xxxxxxxx)\b"
+)
+_CONTEXT_WINDOW = 40
 
 
 def _redact(value: str) -> str:
@@ -45,6 +56,11 @@ def extract_secrets(content: str, source_url: str) -> list[Secret]:
     signature) to check for `"alg":"none"` — a direct authentication-bypass
     primitive, reported as its own distinct, higher-severity secret type
     alongside the plain 'jwt_token' match.
+
+    A match is dropped (never even hashed) when an obvious placeholder
+    marker ("example", "placeholder", "dummy", ...) appears immediately
+    around it — noise reduction, not a scoring adjustment: a value someone
+    explicitly labeled fake isn't worth a hunter's time to review.
     """
     secrets: list[Secret] = []
     seen_hashes: set[str] = set()
@@ -52,6 +68,11 @@ def extract_secrets(content: str, source_url: str) -> list[Secret]:
 
     for pattern in load_secret_patterns():
         for match in pattern.regex.finditer(content):
+            context = content[
+                max(0, match.start() - _CONTEXT_WINDOW) : match.end() + _CONTEXT_WINDOW
+            ]
+            if _FALSE_POSITIVE_CONTEXT_RE.search(context):
+                continue
             value = match.group(0)
             digest = _partial_hash(value)
             if digest in seen_hashes:

@@ -328,6 +328,21 @@ mount("websocket-table", DATA.websocket_findings, [
   { key: "snippet_preview", label: "Snippet", code: true },
 ], "No WebSocket findings.");
 
+mount("mass-assignment-table", DATA.mass_assignment_findings, [
+  { key: "field_name", label: "Field" },
+  { key: "severity", label: "Severity" },
+  { key: "source_url", label: "Source" },
+], "No mass assignment findings.");
+
+mount("vulnerable-libraries-table", DATA.vulnerable_libraries, [
+  { key: "library_name", label: "Library" },
+  { key: "detected_version", label: "Version" },
+  { key: "vulnerable_below", label: "Vulnerable below" },
+  { key: "cve", label: "CVE" },
+  { key: "severity", label: "Severity" },
+  { key: "source_url", label: "Source" },
+], "No vulnerable libraries found.");
+
 mount("files-table", DATA.files, [
   { key: "url", label: "URL" },
   { key: "frameworks", label: "Frameworks", get: (r) => r.frameworks.join(", ") },
@@ -375,6 +390,8 @@ def render_html(result: ScanResult) -> str:
         ("Third-party scripts", len(r.third_party_scripts)),
         ("PostMessage findings", len(r.postmessage_findings)),
         ("WebSocket findings", len(r.websocket_findings)),
+        ("Mass assignment findings", len(r.mass_assignment_findings)),
+        ("Vulnerable libraries", len(r.vulnerable_libraries)),
         ("Hypotheses", len(r.hypotheses)),
     ]
     tiles_html = "".join(
@@ -423,6 +440,12 @@ def render_html(result: ScanResult) -> str:
 
 <h2>WebSocket findings</h2>
 <div id="websocket-table"></div>
+
+<h2>Mass assignment findings</h2>
+<div id="mass-assignment-table"></div>
+
+<h2>Vulnerable libraries</h2>
+<div id="vulnerable-libraries-table"></div>
 
 <h2>Files analyzed</h2>
 <div id="files-table"></div>

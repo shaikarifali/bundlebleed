@@ -10,7 +10,7 @@
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="LLM-powered" src="https://img.shields.io/badge/AI%2FLLM-Claude%20%7C%20Ollama%20%7C%20OpenRouter-purple">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-407%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-427%20passing-brightgreen">
 </p>
 
 BundleBleed collects a target's client-side JavaScript and server-rendered
@@ -113,8 +113,14 @@ full list of guarantees this holds to.
   metadata-endpoint references (SSRF targets), exposed Swagger/OpenAPI
   spec paths, exposed `.git`/`.env`/`.svn` path references, internal/
   staging hostname disclosure, `postMessage` listeners with no origin
-  check, and WebSocket connections with no visible auth (Cross-Site
-  WebSocket Hijacking candidates)
+  check, WebSocket connections with no visible auth (Cross-Site WebSocket
+  Hijacking candidates), mass-assignment-shaped object literals (a
+  privileged field like `role`/`isAdmin`/`ownerId` assigned near a
+  PATCH/PUT/POST call — ARIA `role="button"`-style attributes are
+  filtered out explicitly), and known-vulnerable third-party library
+  versions fingerprinted from their own preserved banner comments
+  (Retire.js-style, matched against a small curated list of real CVEs —
+  jQuery, Lodash, Moment.js, AngularJS, Handlebars, Bootstrap, jQuery UI)
 - In-domain subdomains, security-interesting parameters (from both JS
   declarations and URL query strings), DOM-XSS sink/source co-occurrence
 - Source maps are followed and, when a map embeds `sourcesContent`, the

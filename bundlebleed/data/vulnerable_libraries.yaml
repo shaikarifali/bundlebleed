@@ -1,0 +1,75 @@
+# Known-vulnerable JS library version fingerprints (Retire.js-style).
+#
+# The version is read from the library's own preserved banner comment --
+# Terser/UglifyJS keep `/*! ... */` comments by default, which is why these
+# survive minification. This is a real, established technique (it's how
+# Retire.js itself works), not guesswork -- but it means a build that
+# strips banner comments produces a false negative, never a false positive.
+#
+# Deliberately small and curated: only entries with a well-known CVE and at
+# least medium severity, not an exhaustive Retire.js mirror. High signal
+# over broad coverage.
+patterns:
+  - name: jquery
+    regex: 'jQuery\s+v?(\d+\.\d+\.\d+)'
+    vulnerable_below: '3.5.0'
+    cve: 'CVE-2020-11022, CVE-2020-11023'
+    severity: high
+    description: >-
+      jQuery before 3.5.0 is vulnerable to XSS via .html()/.append()/etc.
+      when passing untrusted HTML containing <option> or other elements
+      that jQuery's regex-based HTML parsing mishandles.
+
+  - name: lodash
+    regex: '[Ll]odash[\s\S]{0,60}?[Vv]ersion\s+(\d+\.\d+\.\d+)'
+    vulnerable_below: '4.17.21'
+    cve: 'CVE-2020-8203, CVE-2021-23337'
+    severity: high
+    description: >-
+      Lodash before 4.17.21 has known prototype-pollution and command-
+      injection issues in defaultsDeep/set/template and related functions.
+
+  - name: moment
+    regex: 'moment\.js[\s\S]{0,60}?version\s*:\s*(\d+\.\d+\.\d+)'
+    vulnerable_below: '2.29.4'
+    cve: 'CVE-2022-31129'
+    severity: medium
+    description: >-
+      Moment.js before 2.29.4 has a ReDoS vulnerability in its duration
+      parser.
+
+  - name: angularjs
+    regex: 'AngularJS\s+v(\d+\.\d+\.\d+)'
+    vulnerable_below: '1.8.0'
+    cve: 'CVE-2020-7676'
+    severity: high
+    description: >-
+      AngularJS (1.x) before 1.8.0 has a known sandbox-bypass leading to
+      client-side template injection / XSS.
+
+  - name: handlebars
+    regex: '[Hh]andlebars\s+v(\d+\.\d+\.\d+)'
+    vulnerable_below: '4.7.7'
+    cve: 'CVE-2021-23369, CVE-2021-23383'
+    severity: high
+    description: >-
+      Handlebars before 4.7.7 has known template-injection / prototype-
+      pollution issues that can lead to remote code execution.
+
+  - name: bootstrap
+    regex: '[Bb]ootstrap\s+v(\d+\.\d+\.\d+)'
+    vulnerable_below: '4.3.2'
+    cve: 'CVE-2019-8331'
+    severity: medium
+    description: >-
+      Bootstrap before 4.3.2 has an XSS vulnerability in the tooltip/
+      popover data-template/data-content/data-title attributes.
+
+  - name: jquery-ui
+    regex: 'jQuery\s+UI\s*-?\s*v?(\d+\.\d+\.\d+)'
+    vulnerable_below: '1.13.0'
+    cve: 'CVE-2021-41182, CVE-2021-41183, CVE-2021-41184'
+    severity: high
+    description: >-
+      jQuery UI before 1.13.0 has multiple XSS vulnerabilities in the
+      Datepicker and *Item altField options.

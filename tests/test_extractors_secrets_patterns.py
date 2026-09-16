@@ -66,7 +66,7 @@ SHOULD_MATCH_CASES = [
     ("cloud_metadata_reference", "fetch('http://169.254.169.254/latest/meta-data/')"),
     ("exposed_api_docs_path", "fetch('/swagger.json')"),
     ("exposed_vcs_config_path", "fetch('/.env')"),
-    ("internal_hostname_reference", "const base = 'staging.api.example.com';"),
+    ("internal_hostname_reference", "const base = 'staging.api.acmecorp.com';"),
 ]
 
 
@@ -101,6 +101,33 @@ def test_posthog_project_key_is_not_flagged_as_personal_api_key() -> None:
     secrets = extract_secrets("posthog.init('phc_" + "a" * 45 + "')", source_url="x")
     types = {s.secret_type for s in secrets}
     assert "posthog_personal_api_key" not in types
+
+
+def test_value_labeled_as_placeholder_nearby_is_not_flagged() -> None:
+    secrets = extract_secrets(
+        'const key = "AIza' + "a" * 35 + '"; // placeholder',
+        source_url="x",
+    )
+    assert secrets == []
+
+
+def test_value_labeled_as_example_nearby_is_not_flagged() -> None:
+    secrets = extract_secrets(
+        'const exampleKey = "AIza' + "a" * 35 + '"; // example only',
+        source_url="x",
+    )
+    assert secrets == []
+
+
+def test_stripe_test_key_is_still_flagged_despite_saying_test() -> None:
+    # "test" is deliberately NOT a suppression keyword -- sk_test_ keys are
+    # legitimately described as "test" in real code, and filtering that
+    # word out would defeat the pattern's entire purpose.
+    secrets = extract_secrets(
+        "const stripeTestKey = 'sk_test_ABCDEFGHIJKLMNOPQRSTUVWX';", source_url="x"
+    )
+    types = {s.secret_type for s in secrets}
+    assert "stripe_test_key" in types
 
 
 def test_algolia_search_key_without_admin_keyword_is_not_flagged() -> None:

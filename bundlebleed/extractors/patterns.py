@@ -28,6 +28,16 @@ class SimplePattern:
     regex: re.Pattern[str]
 
 
+@dataclass(frozen=True)
+class CompiledVulnerableLibraryPattern:
+    name: str
+    regex: re.Pattern[str]
+    vulnerable_below: str
+    cve: str
+    severity: str
+    description: str
+
+
 def _load_yaml(filename: str) -> dict[str, list[dict[str, str]]]:
     text = resources.files("bundlebleed.data").joinpath(filename).read_text()
     data = yaml.safe_load(text)
@@ -87,6 +97,22 @@ def load_secret_patterns() -> list[CompiledSecretPattern]:
             name=entry["name"],
             regex=re.compile(entry["regex"]),
             severity=str(entry.get("severity", "medium")),
+        )
+        for entry in data["patterns"]
+    ]
+
+
+@lru_cache(maxsize=1)
+def load_vulnerable_library_patterns() -> list[CompiledVulnerableLibraryPattern]:
+    data = _load_yaml("vulnerable_libraries.yaml")
+    return [
+        CompiledVulnerableLibraryPattern(
+            name=entry["name"],
+            regex=re.compile(entry["regex"]),
+            vulnerable_below=str(entry["vulnerable_below"]),
+            cve=str(entry["cve"]),
+            severity=str(entry.get("severity", "medium")),
+            description=str(entry["description"]).strip(),
         )
         for entry in data["patterns"]
     ]

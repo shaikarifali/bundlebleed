@@ -181,6 +181,29 @@ def render_markdown(result: ScanResult) -> str:
         for w in r.websocket_findings:
             lines.append(f"| {w.source_url} | `{w.snippet_preview}` |")
 
+    lines += ["", "## Mass assignment findings", ""]
+
+    if not r.mass_assignment_findings:
+        lines.append("_None found._")
+    else:
+        lines.append("| Field | Severity | Source |")
+        lines.append("|---|---|---|")
+        for ma in r.mass_assignment_findings:
+            lines.append(f"| {ma.field_name} | {ma.severity} | {ma.source_url} |")
+
+    lines += ["", "## Vulnerable libraries", ""]
+
+    if not r.vulnerable_libraries:
+        lines.append("_None found._")
+    else:
+        lines.append("| Library | Version | Vulnerable below | CVE | Severity | Source |")
+        lines.append("|---|---|---|---|---|---|")
+        for lib in r.vulnerable_libraries:
+            lines.append(
+                f"| {lib.library_name} | {lib.detected_version} | {lib.vulnerable_below} "
+                f"| {lib.cve} | {lib.severity} | {lib.source_url} |"
+            )
+
     lines += ["", "## Files analyzed", ""]
 
     if not r.files:

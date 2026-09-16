@@ -469,4 +469,56 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
             )
         )
 
+    for ma in result.mass_assignment_findings:
+        hid = stable_id("mass_assignment", ma.source_url, ma.field_name)
+        hypotheses.append(
+            Hypothesis(
+                id=hid,
+                target_kind="mass_assignment",
+                target_value=ma.field_name,
+                source_url=ma.source_url,
+                bug_classes=["Mass Assignment / Object Property Injection"],
+                evidence_chain=[
+                    f"Privileged-looking field '{ma.field_name}' is assigned inside an "
+                    f"object literal near a PATCH/PUT/POST call in {ma.source_url}",
+                ],
+                confidence=0.3,
+                risk=ma.severity,
+                proposed_test=(
+                    "Using a low-privilege controlled test account, send the real request "
+                    "but add this field with a different, still-authorized value; if the "
+                    "server applies it (e.g. escalates a role or crosses a tenant/owner "
+                    "boundary), this is a confirmed mass-assignment vulnerability. Never "
+                    "test with a genuinely destructive or unauthorized value."
+                ),
+            )
+        )
+
+    for lib in result.vulnerable_libraries:
+        hid = stable_id(
+            "vulnerable_library", lib.source_url, lib.library_name, lib.detected_version
+        )
+        hypotheses.append(
+            Hypothesis(
+                id=hid,
+                target_kind="vulnerable_library",
+                target_value=f"{lib.library_name} {lib.detected_version}",
+                source_url=lib.source_url,
+                bug_classes=["Known-Vulnerable JS Dependency"],
+                evidence_chain=[
+                    f"Detected {lib.library_name} {lib.detected_version} (vulnerable below "
+                    f"{lib.vulnerable_below}) in {lib.source_url}",
+                    f"{lib.cve}: {lib.description}",
+                ],
+                confidence=0.4,
+                risk=lib.severity,
+                proposed_test=(
+                    "A vulnerable library version is not proof of an exploitable "
+                    "application: confirm the specific vulnerable code path the CVE "
+                    "describes is actually reachable and fed attacker-controlled input "
+                    "before reporting."
+                ),
+            )
+        )
+
     return hypotheses

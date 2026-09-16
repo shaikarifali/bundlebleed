@@ -9,12 +9,14 @@ from bundlebleed.models import (
     CorsMisconfiguration,
     DomFinding,
     Endpoint,
+    MassAssignmentFinding,
     PostMessageFinding,
     ScanResult,
     SchemaDiscrepancy,
     Secret,
     SubdomainFinding,
     ThirdPartyScript,
+    VulnerableLibraryFinding,
     WebSocketFinding,
 )
 
@@ -401,6 +403,41 @@ def test_websocket_finding_generates_medium_risk_hypothesis() -> None:
     assert len(hypotheses) == 1
     assert hypotheses[0].bug_classes == ["Cross-Site WebSocket Hijacking Candidate"]
     assert hypotheses[0].risk == "medium"
+
+
+def test_mass_assignment_finding_preserves_its_severity_as_risk() -> None:
+    high = MassAssignmentFinding(
+        source_url="https://e.com/app.js", field_name="role", severity="high", snippet_preview="x"
+    )
+    medium = MassAssignmentFinding(
+        source_url="https://e.com/app.js",
+        field_name="verified",
+        severity="medium",
+        snippet_preview="x",
+    )
+    hypotheses = generate_hypotheses(_result(mass_assignment_findings=[high, medium]))
+    assert len(hypotheses) == 2
+    by_field = {h.target_value: h for h in hypotheses}
+    assert by_field["role"].bug_classes == ["Mass Assignment / Object Property Injection"]
+    assert by_field["role"].risk == "high"
+    assert by_field["verified"].risk == "medium"
+
+
+def test_vulnerable_library_finding_generates_expected_hypothesis() -> None:
+    lib = VulnerableLibraryFinding(
+        source_url="https://e.com/vendor.js",
+        library_name="jquery",
+        detected_version="3.4.1",
+        vulnerable_below="3.5.0",
+        cve="CVE-2020-11022",
+        severity="high",
+        description="jQuery XSS via .html()",
+    )
+    hypotheses = generate_hypotheses(_result(vulnerable_libraries=[lib]))
+    assert len(hypotheses) == 1
+    assert hypotheses[0].bug_classes == ["Known-Vulnerable JS Dependency"]
+    assert hypotheses[0].risk == "high"
+    assert "CVE-2020-11022" in hypotheses[0].evidence_chain[1]
 
 
 def test_hypothesis_ids_are_stable_and_unique_across_target_kinds() -> None:

@@ -109,6 +109,36 @@ class WebSocketFinding(BaseModel):
     snippet_preview: str
 
 
+class MassAssignmentFinding(BaseModel):
+    """A privileged-looking field (role/isAdmin/permissions/ownerId/...)
+    assigned inside an object literal near a state-changing (PATCH/PUT/
+    POST) call — the shape of a client sending a field a server might
+    blindly apply. A window heuristic, not a proven vulnerability: the
+    server may already ignore or validate this field."""
+
+    source_url: str
+    field_name: str
+    severity: str
+    snippet_preview: str
+
+
+class VulnerableLibraryFinding(BaseModel):
+    """A known-vulnerable third-party library version, fingerprinted from
+    its own preserved version banner (Retire.js-style; Terser/UglifyJS
+    keep `/*! ... */` comments by default, which is why these survive
+    minification). Presence of a vulnerable version is not proof the
+    application is exploitable — it depends on which feature path is
+    actually used."""
+
+    source_url: str
+    library_name: str
+    detected_version: str
+    vulnerable_below: str
+    cve: str
+    severity: str
+    description: str
+
+
 class GraphStats(BaseModel):
     node_count: int
     edge_count: int
@@ -149,6 +179,8 @@ class ScanResult(BaseModel):
     third_party_scripts: list[ThirdPartyScript] = Field(default_factory=list)
     postmessage_findings: list[PostMessageFinding] = Field(default_factory=list)
     websocket_findings: list[WebSocketFinding] = Field(default_factory=list)
+    mass_assignment_findings: list[MassAssignmentFinding] = Field(default_factory=list)
+    vulnerable_libraries: list[VulnerableLibraryFinding] = Field(default_factory=list)
     graph_stats: GraphStats | None = None
     endpoint_schema_discrepancy: SchemaDiscrepancy | None = None
     ai_verdicts: list[AIEndpointVerdict] = Field(default_factory=list)
@@ -187,6 +219,12 @@ class ScanResult(BaseModel):
         unique_websocket_findings = {
             (w.source_url, w.snippet_preview): w for w in self.websocket_findings
         }
+        unique_mass_assignment_findings = {
+            (m.source_url, m.field_name.lower()): m for m in self.mass_assignment_findings
+        }
+        unique_vulnerable_libraries = {
+            (v.source_url, v.library_name, v.detected_version): v for v in self.vulnerable_libraries
+        }
         unique_ai_verdicts = {v.evidence_id: v for v in self.ai_verdicts}
         unique_hypotheses = {h.id: h for h in self.hypotheses}
 
@@ -222,6 +260,14 @@ class ScanResult(BaseModel):
                 "websocket_findings": sorted(
                     unique_websocket_findings.values(),
                     key=lambda w: (w.source_url, w.snippet_preview),
+                ),
+                "mass_assignment_findings": sorted(
+                    unique_mass_assignment_findings.values(),
+                    key=lambda m: (m.source_url, m.field_name.lower()),
+                ),
+                "vulnerable_libraries": sorted(
+                    unique_vulnerable_libraries.values(),
+                    key=lambda v: (v.source_url, v.library_name, v.detected_version),
                 ),
                 "ai_verdicts": sorted(unique_ai_verdicts.values(), key=lambda v: v.evidence_id),
                 "ai_injection_flags": sorted(set(self.ai_injection_flags)),
