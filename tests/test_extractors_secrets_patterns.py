@@ -136,3 +136,36 @@ def test_algolia_search_key_without_admin_keyword_is_not_flagged() -> None:
     secrets = extract_secrets("algoliaSearchKey: " + "a" * 32, source_url="x")
     types = {s.secret_type for s in secrets}
     assert "algolia_admin_api_key" not in types
+
+
+def test_internal_hostname_reference_matches_a_non_first_label() -> None:
+    # The far more common real-world shape: the "internal"/"staging"-style
+    # keyword is a middle label, not the first one (e.g. an app subdomain
+    # in front of an internal environment label).
+    secrets = extract_secrets(
+        "const gateway = 'https://app.internal.acmecorp.com';", source_url="x"
+    )
+    types = {s.secret_type for s in secrets}
+    assert "internal_hostname_reference" in types
+
+
+def test_internal_hostname_reference_matches_a_hyphenated_compound_label() -> None:
+    # Also extremely common: "api-internal.example.com" style gateway
+    # naming, where the keyword is the second half of a hyphenated label.
+    secrets = extract_secrets(
+        "const gateway = 'https://api-internal.staging.acmecorp.com';", source_url="x"
+    )
+    types = {s.secret_type for s in secrets}
+    assert "internal_hostname_reference" in types
+
+
+def test_internal_hostname_reference_does_not_match_an_unrelated_longer_word() -> None:
+    # "devops"/"development" contain "dev" as a substring but are a single
+    # word, not "dev" as a hostname label -- must not be flagged.
+    secrets = extract_secrets(
+        "const url = 'https://devops.example.com'; "
+        "const other = 'https://development.example.com';",
+        source_url="x",
+    )
+    types = {s.secret_type for s in secrets}
+    assert "internal_hostname_reference" not in types
