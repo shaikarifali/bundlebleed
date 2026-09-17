@@ -2,7 +2,11 @@
 # to the whole match) used as the extracted value.
 patterns:
   - name: rest_api_path
-    regex: '/api/[a-zA-Z0-9_\-/{}:]+'
+    # The optional '-[a-zA-Z]+' covers the extremely common internal-gateway
+    # naming convention ('/api-internal/', '/api-int/', '/api-private/', ...)
+    # -- real production apps route their most sensitive, never-linked-from-
+    # the-UI endpoints through exactly this style of prefix.
+    regex: '/api(?:-[a-zA-Z]+)?/[a-zA-Z0-9_\-/{}:]+'
 
   - name: express_style_param
     regex: '/[a-zA-Z]+/:[a-zA-Z]+'
