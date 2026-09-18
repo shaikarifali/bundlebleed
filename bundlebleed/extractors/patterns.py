@@ -13,6 +13,13 @@ class CompiledEndpointPattern:
     name: str
     regex: re.Pattern[str]
     group: int
+    # At most one of these is ever set. `method` is a fixed verb true for
+    # every match of this pattern (sendBeacon is always a POST). `method_group`
+    # is a regex group index to read the verb from per-match, for one pattern
+    # that matches several verbs via alternation (axios.(get|post|...),
+    # $.(get|post)(...), xhr.open("GET"|"POST"|...)).
+    method: str | None = None
+    method_group: int | None = None
 
 
 @dataclass(frozen=True)
@@ -51,7 +58,11 @@ def load_endpoint_patterns() -> list[CompiledEndpointPattern]:
     data = _load_yaml("endpoint_patterns.yaml")
     return [
         CompiledEndpointPattern(
-            name=entry["name"], regex=re.compile(entry["regex"]), group=int(entry.get("group", 0))
+            name=entry["name"],
+            regex=re.compile(entry["regex"]),
+            group=int(entry.get("group", 0)),
+            method=entry.get("method"),
+            method_group=int(entry["method_group"]) if "method_group" in entry else None,
         )
         for entry in data["patterns"]
     ]

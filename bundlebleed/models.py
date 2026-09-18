@@ -12,6 +12,18 @@ class Endpoint(BaseModel):
     value: str
     pattern_name: str
     source_url: str
+    # Only set when the matched text itself unambiguously names the HTTP
+    # method (an axios/jquery verb call, a literal xhr.open() method
+    # argument, an html <form method="...">, or sendBeacon's fixed POST) --
+    # never guessed as a default for a call shape that could be either
+    # (fetch(), bare axios(), $.ajax()), since that would assert something
+    # the source text doesn't actually say.
+    method: str | None = None
+    # Populated by deduplicate_endpoints() when the identical
+    # (pattern_name, value, method) triple was also seen in another file --
+    # every occurrence is kept as evidence instead of silently dropped, but
+    # only one Endpoint/Hypothesis represents it.
+    also_seen_in: list[str] = Field(default_factory=list)
 
 
 class Secret(BaseModel):

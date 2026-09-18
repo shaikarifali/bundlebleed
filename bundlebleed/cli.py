@@ -41,7 +41,7 @@ from bundlebleed.evidence.store import (
 from bundlebleed.extractors.cors import extract_cors_misconfiguration
 from bundlebleed.extractors.dependencies import extract_vulnerable_libraries
 from bundlebleed.extractors.dom_analysis import extract_dom_findings
-from bundlebleed.extractors.endpoints import extract_endpoints
+from bundlebleed.extractors.endpoints import deduplicate_endpoints, extract_endpoints
 from bundlebleed.extractors.graphql import extract_graphql_operations
 from bundlebleed.extractors.html_links import extract_html_endpoints, extract_third_party_scripts
 from bundlebleed.extractors.mass_assignment import extract_mass_assignment_findings
@@ -802,7 +802,11 @@ def scan(
             unique_domains = sorted({s.domain for s in subdomains})
             dangling_cnames = check_dangling_cnames(unique_domains)
 
-    endpoints = url_endpoints + body_endpoints
+    # Merge endpoints seen in more than one file (a shared chunk, or the
+    # same literal in both the raw-URL and JS-body passes) into one Endpoint
+    # each, so one real endpoint doesn't become one duplicate Hypothesis per
+    # file it happened to be referenced from.
+    endpoints = deduplicate_endpoints(url_endpoints + body_endpoints)
 
     result = ScanResult(
         scan_run_id=scan_run_id,

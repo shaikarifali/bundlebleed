@@ -44,6 +44,14 @@ def test_extracts_form_actions_tagged_by_method() -> None:
     assert by_pattern["html_form_get"] == "/search"
 
 
+def test_endpoint_method_field_matches_the_pattern_name() -> None:
+    endpoints = extract_html_endpoints(SHOP_PAGE, PAGE_URL)
+    by_pattern = {e.pattern_name: e.method for e in endpoints}
+    assert by_pattern["html_link"] == "GET"
+    assert by_pattern["html_form_post"] == "POST"
+    assert by_pattern["html_form_get"] == "GET"
+
+
 def test_relative_links_resolved_against_page_url() -> None:
     endpoints = extract_html_endpoints(
         '<a href="settings">Settings</a>', "https://example.com/account/"

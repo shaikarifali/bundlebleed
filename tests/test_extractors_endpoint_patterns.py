@@ -7,6 +7,16 @@ def _values(content: str) -> set[str]:
     return {e.value for e in extract_endpoints(content, source_url="x")}
 
 
+def _method_for(content: str, value: str, pattern_name: str) -> str | None:
+    matches = [
+        e
+        for e in extract_endpoints(content, source_url="x")
+        if e.value == value and e.pattern_name == pattern_name
+    ]
+    assert len(matches) == 1, f"expected exactly one {pattern_name!r} endpoint {value!r}"
+    return matches[0].method
+
+
 def test_jquery_get_post_call() -> None:
     assert "/api/v1/search" in _values('$.get("/api/v1/search", function(data) {});')
     assert "/api/v1/comments" in _values('$.post("/api/v1/comments", payload);')
@@ -60,4 +70,48 @@ def test_rest_api_path_matches_internal_gateway_prefix() -> None:
 def test_rest_api_path_still_matches_plain_api_prefix() -> None:
     assert "/api/v1/legacy/billing/run-settlement" in _values(
         'legacyBilling: "/api/v1/legacy/billing/run-settlement",'
+    )
+
+
+def test_axios_call_captures_the_verb_as_method() -> None:
+    assert _method_for('axios.get("/api/v1/orders");', "/api/v1/orders", "axios_call") == "GET"
+    assert (
+        _method_for('axios.delete("/api/v1/orders/9");', "/api/v1/orders/9", "axios_call")
+        == "DELETE"
+    )
+
+
+def test_jquery_get_post_captures_the_verb_as_method() -> None:
+    assert _method_for('$.get("/api/v1/search");', "/api/v1/search", "jquery_get_post") == "GET"
+    assert (
+        _method_for('$.post("/api/v1/comments");', "/api/v1/comments", "jquery_get_post") == "POST"
+    )
+
+
+def test_xhr_open_captures_the_verb_as_method() -> None:
+    assert _method_for('xhr.open("GET", "/api/v1/status");', "/api/v1/status", "xhr_open") == "GET"
+    assert (
+        _method_for("xhr.open('DELETE', '/api/v1/item/1');", "/api/v1/item/1", "xhr_open")
+        == "DELETE"
+    )
+
+
+def test_send_beacon_is_always_reported_as_post() -> None:
+    assert (
+        _method_for(
+            'navigator.sendBeacon("/api/v1/analytics", data);',
+            "/api/v1/analytics",
+            "send_beacon",
+        )
+        == "POST"
+    )
+
+
+def test_ambiguous_call_shapes_do_not_assert_a_method() -> None:
+    # fetch(), bare axios(), and $.ajax() default to GET only when no
+    # options object overrides it -- never guessed, since the source text
+    # alone doesn't say either way.
+    assert _method_for('fetch("/api/v1/profile");', "/api/v1/profile", "fetch_call") is None
+    assert (
+        _method_for('axios("/api/v1/users/123");', "/api/v1/users/123", "axios_shorthand") is None
     )

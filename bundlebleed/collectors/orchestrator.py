@@ -9,14 +9,21 @@ import structlog
 from bundlebleed.collectors.base import Collector
 from bundlebleed.collectors.gau import GauCollector
 from bundlebleed.collectors.katana import KatanaCollector
+from bundlebleed.collectors.paramspider import ParamSpiderCollector
 from bundlebleed.collectors.wayback import WaybackCollector
+from bundlebleed.collectors.waymore import WaymoreCollector
 from bundlebleed.config import BundleBleedConfig
 from bundlebleed.scope.guard import ScopeGuard
 from bundlebleed.scope.models import Decision, ScopeConfig
 
 logger = structlog.get_logger(__name__)
 
-PASSIVE_COLLECTORS: list[Collector] = [GauCollector(), WaybackCollector()]
+PASSIVE_COLLECTORS: list[Collector] = [
+    GauCollector(),
+    WaybackCollector(),
+    WaymoreCollector(),
+    ParamSpiderCollector(),
+]
 ACTIVE_COLLECTORS: list[Collector] = [KatanaCollector()]
 
 

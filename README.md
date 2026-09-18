@@ -77,9 +77,9 @@ full list of guarantees this holds to.
 - Scope from `-t domain.com`, `-tL scope.txt` (many domains, wildcards,
   exclusions), or a full `scope.yaml` (rate limiting, authorization
   attestation, sessions)
-- Passive collection via `gau`/`waybackurls`; active crawling via `katana`,
-  gated behind an explicit config flag *and* CLI flag *and* a signed
-  authorization attestation — all three, every time
+- Passive collection via `gau`/`waybackurls`/`waymore`/`paramspider`; active
+  crawling via `katana`, gated behind an explicit config flag *and* CLI flag
+  *and* a signed authorization attestation — all three, every time
 - `--seed-url`/`--seed-url-file` to inject known URLs directly — essential
   for a freshly provisioned or JS-heavy SPA target with no archive history
 - Every single URL, from any source, is re-validated through `ScopeGuard`
@@ -90,7 +90,15 @@ full list of guarantees this holds to.
   `fetch()`/`axios()`/`$.ajax()`/`$.get()`/`$.post()`, bare `axios(...)`
   and config-object shorthand, raw `XMLHttpRequest.open()`,
   `navigator.sendBeacon()`, GraphQL, WebSocket — plus plain server-rendered
-  `<a href>` links and `<form action>` targets that JS-only patterns miss
+  `<a href>` links and `<form action>` targets that JS-only patterns miss.
+  The HTTP method is captured too, wherever the matched text itself
+  unambiguously names it (an `axios`/`jquery` verb call, a literal
+  `xhr.open()` method, a `<form method="...">`, or `sendBeacon`'s fixed
+  POST) — never guessed for a call shape that could be either (`fetch()`,
+  bare `axios()`, `$.ajax()`). The same endpoint referenced from more than
+  one file (a shared chunk, or seen in both a raw-URL and a JS-body pass)
+  is merged into one, with every other file it appeared in kept as
+  evidence rather than becoming a duplicate finding.
 - 57 secret patterns: cloud provider keys (AWS/GCP/Azure/Cloudflare/
   DigitalOcean), payment/messaging tokens (Stripe, Slack, Twilio, SendGrid,
   Discord, Square, Shopify, PayPal/Braintree), AI/LLM provider keys

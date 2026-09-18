@@ -1,6 +1,6 @@
 [project]
 name = "bundlebleed"
-version = "0.30.2"
+version = "0.31.0"
 description = "Scope-gated JS recon and secret/endpoint extraction for authorized bug bounty testing"
 readme = "README.md"
 requires-python = ">=3.12"

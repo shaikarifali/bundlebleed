@@ -148,6 +148,29 @@ def test_js_body_only_endpoint_gets_higher_confidence_and_evidence_note() -> Non
     assert any("Only visible after downloading" in r for r in with_body.evidence_chain)
 
 
+def test_endpoint_seen_in_multiple_files_gets_an_evidence_note() -> None:
+    endpoint = Endpoint(
+        value="/api/v1/users/123",
+        pattern_name="rest_api_path",
+        source_url="https://e.com/chunk-a.js",
+        also_seen_in=["https://e.com/chunk-b.js", "https://e.com/chunk-c.js"],
+    )
+
+    hypothesis = generate_hypotheses(_result(endpoints=[endpoint]))[0]
+
+    assert any("Also referenced from 2 other file(s)" in r for r in hypothesis.evidence_chain)
+
+
+def test_endpoint_seen_in_only_one_file_has_no_extra_evidence_note() -> None:
+    endpoint = Endpoint(
+        value="/api/v1/users/123", pattern_name="rest_api_path", source_url="https://e.com/app.js"
+    )
+
+    hypothesis = generate_hypotheses(_result(endpoints=[endpoint]))[0]
+
+    assert not any("Also referenced from" in r for r in hypothesis.evidence_chain)
+
+
 def test_auth_only_endpoint_gets_higher_confidence_and_evidence_note() -> None:
     endpoint = Endpoint(
         value="/api/v1/users/123",

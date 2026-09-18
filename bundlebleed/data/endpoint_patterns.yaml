@@ -1,5 +1,9 @@
 # Endpoint extraction patterns. Each has an optional capture `group` (defaults
-# to the whole match) used as the extracted value.
+# to the whole match) used as the extracted value. `method`/`method_group`
+# populate Endpoint.method -- only added where the matched text itself
+# unambiguously names the HTTP verb (see extractors/patterns.py); a call
+# shape whose verb could be anything (fetch(), bare axios(), $.ajax()) is
+# deliberately left unset rather than assumed to be GET.
 patterns:
   - name: rest_api_path
     # The optional '-[a-zA-Z]+' covers the extremely common internal-gateway
@@ -19,16 +23,18 @@ patterns:
     group: 1
 
   - name: axios_call
-    regex: 'axios\.(?:get|post|put|patch|delete)\s*\(\s*[''"`]([^''"`]+)'
-    group: 1
+    regex: 'axios\.(get|post|put|patch|delete)\s*\(\s*[''"`]([^''"`]+)'
+    group: 2
+    method_group: 1
 
   - name: jquery_ajax
     regex: '\.ajax\s*\(\s*\{[^}]*url\s*:\s*[''"`]([^''"`]+)'
     group: 1
 
   - name: jquery_get_post
-    regex: '\$\.(?:get|post)\s*\(\s*[''"`]([^''"`]+)'
-    group: 1
+    regex: '\$\.(get|post)\s*\(\s*[''"`]([^''"`]+)'
+    group: 2
+    method_group: 1
 
   - name: axios_shorthand
     regex: 'axios\s*\(\s*[''"`]([^''"`]+)'
@@ -39,12 +45,16 @@ patterns:
     group: 1
 
   - name: xhr_open
-    regex: '\.open\s*\(\s*[''"`](?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)[''"`]\s*,\s*[''"`]([^''"`]+)'
-    group: 1
+    regex: '\.open\s*\(\s*[''"`](GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)[''"`]\s*,\s*[''"`]([^''"`]+)'
+    group: 2
+    method_group: 1
 
   - name: send_beacon
+    # sendBeacon() always issues a POST -- fixed by the Beacon API spec,
+    # not something that needs to be read out of the call site.
     regex: 'sendBeacon\s*\(\s*[''"`]([^''"`]+)'
     group: 1
+    method: POST
 
   - name: graphql_endpoint
     regex: '/(?:api/)?graphql[a-zA-Z0-9_\-/]*'

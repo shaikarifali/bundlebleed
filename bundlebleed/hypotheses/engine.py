@@ -229,6 +229,11 @@ def generate_hypotheses(result: ScanResult) -> list[Hypothesis]:
         evidence_chain = [
             f"Endpoint discovered via pattern '{endpoint.pattern_name}' at {endpoint.source_url}"
         ]
+        if endpoint.also_seen_in:
+            evidence_chain.append(
+                f"Also referenced from {len(endpoint.also_seen_in)} other file(s): "
+                + ", ".join(endpoint.also_seen_in)
+            )
 
         rule_match = False
         if (

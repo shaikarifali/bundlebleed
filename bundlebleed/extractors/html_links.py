@@ -43,7 +43,7 @@ def extract_html_endpoints(html: str, page_url: str) -> list[Endpoint]:
         path = _path_and_query(resolved)
         key = ("html_link", path)
         findings.setdefault(
-            key, Endpoint(value=path, pattern_name="html_link", source_url=page_url)
+            key, Endpoint(value=path, pattern_name="html_link", source_url=page_url, method="GET")
         )
 
     for tag_match in _FORM_TAG_RE.finditer(html):
@@ -61,7 +61,13 @@ def extract_html_endpoints(html: str, page_url: str) -> list[Endpoint]:
         path = _path_and_query(resolved)
         key = (pattern_name, path)
         findings.setdefault(
-            key, Endpoint(value=path, pattern_name=pattern_name, source_url=page_url)
+            key,
+            Endpoint(
+                value=path,
+                pattern_name=pattern_name,
+                source_url=page_url,
+                method=method.upper(),
+            ),
         )
 
     return list(findings.values())
