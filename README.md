@@ -40,6 +40,7 @@ how much you already know:
 | **Know the basics, want the mechanics?** | [How It Works](docs/02-how-it-works.md) — the real pipeline, the scoring engine's exact math, the safety gates |
 | **Need the exhaustive detection list?** | [Detection Reference](docs/03-detection-reference.md) — every endpoint pattern, secret pattern, and bug class |
 | **Building on top of it / contributing?** | [Architecture & Extending](docs/04-architecture.md) — module map, adding a pattern with no code change |
+| **Prefer a picture?** | [Architecture Diagrams](docs/07-architecture-diagrams.md) — pipeline, module graph, and scoring engine as Mermaid diagrams |
 | **Just need the flags?** | [CLI Reference](docs/05-cli-reference.md) |
 | **Have a question?** | [FAQ](docs/06-faq.md) |
 

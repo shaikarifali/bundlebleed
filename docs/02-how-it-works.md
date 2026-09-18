@@ -7,6 +7,9 @@ are given throughout so you can go read the source directly.
 
 ## The pipeline
 
+*(Prefer a picture? See [Architecture Diagrams § 1](07-architecture-diagrams.md#1-the-full-scan-pipeline)
+for this same pipeline as a rendered flowchart.)*
+
 A single `bundlebleed scan` invocation runs every stage below, in this
 order, inside one process:
 
@@ -63,6 +66,8 @@ edit — a config typo, a copy-pasted CLI flag — can silently turn on active
 scanning. `--runtime-capture` (below) requires the same three gates.
 
 ## The hypothesis / scoring engine
+
+*(Diagram: [Architecture Diagrams § 3](07-architecture-diagrams.md#3-the-scoring-engine).)*
 
 An extracted item only becomes a **Hypothesis** if it first clears a
 bug-class gate — see [Detection Reference](03-detection-reference.md#bug-classes)

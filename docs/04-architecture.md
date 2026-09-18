@@ -5,6 +5,9 @@ contributing. Assumes you've read [How It Works](02-how-it-works.md).
 
 ## Module map
 
+*(Diagram: [Architecture Diagrams § 2](07-architecture-diagrams.md#2-module-architecture)
+for this same map as a dependency graph.)*
+
 ```text
 bundlebleed/
 ├── cli.py                 Typer app; scan/monitor/scope/verify/ai commands

@@ -27,6 +27,11 @@ DOM sinks/sources, vulnerable-library CVEs — the full table.
 Module map, how to add a detection pattern without touching Python, how
 the identity/dedup/scoring internals fit together, contribution guide.
 
+**Prefer a picture to a paragraph?**
+→ [07 — Architecture Diagrams](07-architecture-diagrams.md)
+The full pipeline, the module dependency graph, and the scoring engine, all
+as Mermaid diagrams that render directly on GitHub.
+
 **Just need the flags?**
 → [05 — CLI Reference](05-cli-reference.md)
 Every command, every flag, grouped by what they do.
