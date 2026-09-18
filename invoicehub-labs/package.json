@@ -1,0 +1,16 @@
+{
+  "name": "invoicehub-vulnerable-lab",
+  "version": "1.0.0",
+  "description": "InvoiceHub - a deliberately vulnerable invoicing-platform clone for the BundleBleed talk demo labs. FOR AUTHORIZED LEARNING ONLY.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "express": "^4.19.2"
+  }
+}

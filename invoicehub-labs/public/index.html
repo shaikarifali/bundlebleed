@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>InvoiceHub — Merchant Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Login -->
+    <section id="login-view" class="card center">
+      <div class="brand">
+        <span class="brand-mark">◆</span> InvoiceHub
+        <span class="env-badge">DEMO LAB</span>
+      </div>
+      <p class="muted">Merchant Dashboard — <span class="redacted">redacted.com</span></p>
+      <label>Email <input id="email" value="viewer@acme.test" autocomplete="username" /></label>
+      <label>Password <input id="password" type="password" value="password123" autocomplete="current-password" /></label>
+      <button id="login-btn">Sign in</button>
+      <p id="login-error" class="error"></p>
+      <details class="hint">
+        <summary>Demo accounts</summary>
+        <ul>
+          <li><code>owner@acme.test</code> <span class="muted">— owner, MFA on</span></li>
+          <li><code>viewer@acme.test</code> <span class="muted">— viewer, MFA off</span></li>
+          <li><code>support@acme.test</code> <span class="muted">— support, MFA off</span></li>
+          <li><code>owner@globex.test</code> <span class="muted">— other tenant (IDOR victim)</span></li>
+        </ul>
+        <p class="muted">Password for all: <code>password123</code></p>
+      </details>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dash-view" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">◆</span> InvoiceHub
+          <span class="env-badge">DEMO LAB</span>
+        </div>
+        <div class="who">
+          <span id="who-name"></span>
+          <span id="who-role" class="pill"></span>
+          <span id="who-mfa" class="pill"></span>
+          <button id="logout-btn" class="ghost">Logout</button>
+        </div>
+      </header>
+      <nav class="tabs">
+        <button data-tab="invoices" class="tab active">Invoices</button>
+        <button data-tab="customers" class="tab">Customers</button>
+        <button data-tab="webhooks" class="tab">Webhooks</button>
+        <button data-tab="team" class="tab">Team</button>
+        <button data-tab="branding" class="tab">Branding</button>
+      </nav>
+      <main id="panel"></main>
+    </section>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
