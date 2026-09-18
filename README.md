@@ -10,7 +10,7 @@
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="LLM-powered" src="https://img.shields.io/badge/AI%2FLLM-Claude%20%7C%20Ollama%20%7C%20OpenRouter-purple">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-450%20passing-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-468%20passing-brightgreen">
 </p>
 
 BundleBleed collects a target's client-side JavaScript and server-rendered
@@ -28,6 +28,20 @@ endpoints, draft a human-readable report from a hypothesis, and surface
 attack chains connecting multiple findings, every claim tied back to a
 citation from the actual scan evidence. See [AI-Powered Analysis](#ai-powered-analysis)
 below.
+
+## 📚 Documentation
+
+This README is the pitch and quickstart. For the deep reference, split by
+how much you already know:
+
+| | |
+|---|---|
+| **New to JS recon or this tool?** | [Getting Started](docs/01-getting-started.md) — what it is, install, first scan, reading the output |
+| **Know the basics, want the mechanics?** | [How It Works](docs/02-how-it-works.md) — the real pipeline, the scoring engine's exact math, the safety gates |
+| **Need the exhaustive detection list?** | [Detection Reference](docs/03-detection-reference.md) — every endpoint pattern, secret pattern, and bug class |
+| **Building on top of it / contributing?** | [Architecture & Extending](docs/04-architecture.md) — module map, adding a pattern with no code change |
+| **Just need the flags?** | [CLI Reference](docs/05-cli-reference.md) |
+| **Have a question?** | [FAQ](docs/06-faq.md) |
 
 ## Why this one
 
