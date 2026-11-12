@@ -1,0 +1,8 @@
+services:
+  invoicehub:
+    build: ./invoicehub
+    container_name: invoicehub-lab
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000

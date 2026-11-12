@@ -1,0 +1,4 @@
+BUNDLEBLEED-PROMPT-VERSION: report-writer-v1
+Draft a bug bounty report for the following hypothesis.
+
+{evidence}

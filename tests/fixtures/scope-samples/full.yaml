@@ -1,0 +1,28 @@
+project:
+  name: "Example Corp Bug Bounty"
+  platform: "hackerone"
+  program_url: "https://hackerone.com/example"
+
+scope:
+  in_scope:
+    - domain: "example.com"
+      type: "wildcard"
+      include_subdomains: true
+    - domain: "api.example.com"
+      type: "exact"
+
+  out_of_scope:
+    - "blog.example.com"
+    - "*.wordpress.example.com"
+
+  excluded_paths:
+    - "/api/*/payment*"
+    - "*/checkout*"
+
+authorization:
+  attested: true
+  statement: "Authorized under HackerOne program example-corp, scope reviewed 2026-09-01."
+
+scan:
+  requests_per_second: 5
+  delay_between_domains: 2

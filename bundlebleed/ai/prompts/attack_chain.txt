@@ -1,0 +1,5 @@
+BUNDLEBLEED-PROMPT-VERSION: attack-chain-v1
+Here are every hypothesis from one authorized scan. Suggest any meaningful
+chains between two or more of them (or none, if nothing connects).
+
+{evidence}

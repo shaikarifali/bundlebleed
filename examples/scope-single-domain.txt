@@ -1,0 +1,6 @@
+# In-scope domains (one per line)
+example.com
+*.example.com
+
+# Lines starting with ! are out-of-scope
+!blog.example.com

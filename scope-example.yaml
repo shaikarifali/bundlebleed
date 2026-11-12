@@ -1,0 +1,37 @@
+# Fill in your program's scope before
+# running anything — check the program page itself, don't assume the whole
+# domain is in scope. Edit the in_scope/out_of_scope/excluded_paths lists
+# below to match exactly what the program authorizes.
+
+scope:
+  in_scope:
+    - domain: example.com
+      type: wildcard   # matches example.com AND any subdomain (*.example.com)
+      # If the program only lists specific subdomains instead of a wildcard,
+      # replace the entry above with one exact entry per subdomain, e.g.:
+      # - domain: www.example.com
+      #   type: exact
+      # - domain: api.example.com
+      #   type: exact
+
+  out_of_scope: []
+    # Add anything the program explicitly excludes, e.g.:
+    # - blog.example.com
+    # - partners.example.com
+
+  excluded_paths: []
+    # Add any excluded paths the program lists, e.g.:
+    # - /admin/*
+    # - /internal/*
+
+# Only set this to true once you've actually confirmed the scope above is
+# correct and you are enrolled — this does NOT unlock anything by itself,
+# --active still requires the --active CLI flag AND active_scan_enabled in
+# an app config too (all three, every time).
+authorization:
+  attested: false
+
+scan:
+  # Be a good citizen on someone else's production infrastructure.
+  requests_per_second: 2
+  delay_between_domains: 1.0

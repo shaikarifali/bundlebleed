@@ -1,0 +1,15 @@
+<svg viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="88" height="88" rx="18" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="87" height="87" rx="17.5" stroke="#30363d"/>
+  <!-- Left curly brace -->
+  <path d="M28 44 C28 44 22 44 22 38 L22 32 C22 26 18 24 16 24 C18 24 22 22 22 16 L22 10 C22 4 28 4 28 4"
+    stroke="#e6edf3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(4,20)"/>
+  <!-- Right curly brace -->
+  <path d="M60 44 C60 44 66 44 66 38 L66 32 C66 26 70 24 72 24 C70 24 66 22 66 16 L66 10 C66 4 60 4 60 4"
+    stroke="#e6edf3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(-36,20)"/>
+  <!-- Blood drop -->
+  <path d="M44 54 Q40 62 40 67 A4 4 0 0 0 48 67 Q48 62 44 54 Z" fill="#da3633"/>
+  <circle cx="44" cy="67" r="4" fill="#da3633"/>
+  <!-- Center dot -->
+  <circle cx="44" cy="44" r="2.5" fill="#8b949e" opacity="0.6"/>
+</svg>

@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Scan outputs (never commit real target data)
+results/
+findings/
+
+# Environment / secrets
+.env
+.env.local
+
+# Planning docs (not part of the tool)
+JS_Pentest_Agent_Plan*
+JS_Agent_PlanfromCHATGPT.md
+
+# Scope files with real target data
+scope-mbc.yaml
+scope-*.yaml
+!scope-example.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/
